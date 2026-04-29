@@ -1,0 +1,19 @@
+{
+  "name": "ieb-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ieb/web dev",
+    "build": "pnpm --filter @ieb/web build",
+    "preview": "pnpm --filter @ieb/web preview",
+    "typecheck": "pnpm --filter @ieb/web typecheck",
+    "prepare": "pnpm --filter @ieb/web postinstall"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  }
+}

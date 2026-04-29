@@ -1,0 +1,11 @@
+node_modules
+.nuxt
+.output
+.data
+.DS_Store
+.env
+.env.*
+!.env.example
+dist
+.pnpm-store
+

@@ -1,0 +1,10 @@
+{
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@ieb/shared": ["../../packages/shared/src/index.ts"],
+      "@ieb/shared/*": ["../../packages/shared/src/*"]
+    }
+  }
+}
+
