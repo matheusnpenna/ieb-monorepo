@@ -1,0 +1,83 @@
+# Design System Web
+
+Este projeto adota um design system inspirado na linguagem visual da Netflix: fundo cinematografico escuro, contraste alto, superficies em camadas e CTAs em vermelho. A referencia aqui e de clima e hierarquia visual, nao de copia literal de interface, marca ou assets.
+
+## Direcao visual
+
+- Fundo de tela: sempre escuro, com gradientes profundos, halo sutil vermelho e contraste forte.
+- Superficies: paineis em carvao translcido com borda clara discreta, blur leve e sombra longa.
+- Destaque primario: vermelho `#E50914`.
+- Texto principal: quase branco.
+- Texto secundario: cinza quente e dessaturado.
+- Aparencia geral: premium, dramatica, limpa e focada em conteudo.
+
+## Tokens oficiais
+
+- `--ds-bg: #090909`
+- `--ds-bg-elevated: #111111`
+- `--ds-surface: rgba(20, 20, 20, 0.82)`
+- `--ds-surface-strong: rgba(28, 28, 28, 0.92)`
+- `--ds-border: rgba(255, 255, 255, 0.12)`
+- `--ds-text: #F5F5F1`
+- `--ds-muted: #B3B3B0`
+- `--ds-accent: #E50914`
+- `--ds-accent-strong: #FF2D2D`
+- `--ds-success: #46D369`
+- `--ds-danger: #FF6B6B`
+
+## Tipografia
+
+- Titulos e destaques: `Fraunces`.
+- Texto corrido, labels e interface: `Manrope`.
+- Titulo principal: grande, compacto e com tracking negativo.
+- Eyebrow: caixa alta, tracking alto, pequeno e com ar editorial.
+
+## Componentes obrigatorios
+
+Sempre reutilizar estes componentes antes de criar variacoes novas:
+
+- `UiPanel`: superficie padrao para cards, hero sections, sidebars e blocos.
+- `UiButton`: CTA primario, secundario e ghost.
+- `UiField`: wrapper oficial para label, hint e erro.
+- `UiInput`: input padrao.
+- `UiSelect`: select padrao.
+- `UiTextarea`: textarea padrao.
+- `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
+
+## Regras de uso para novas telas
+
+- Toda nova tela deve partir de fundo escuro. Nao usar paginas claras como padrao.
+- Toda acao principal deve usar `UiButton` com `variant="primary"`.
+- Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
+- Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
+- Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
+- Evitar `button`, `input`, `select` e `textarea` crus quando houver componente equivalente.
+- Evitar cores novas sem necessidade real. O vermelho oficial e a ancora visual do sistema.
+- Preferir cantos arredondados amplos, profundidade por sombra e contraste por camadas, nao por excesso de bordas.
+- Priorizar layouts com respiro horizontal, textos curtos e hierarquia muito clara.
+- Em mobile, manter densidade reduzida e CTAs em largura cheia quando fizer sentido.
+
+## Imports explicitos dos componentes
+
+- Sempre importar no `<script setup>` todo componente do design system usado na pagina, mesmo que o auto-import do Nuxt esteja habilitado.
+- Esta regra vale para componentes em `app/components/ui`, `app/components/base` e shells visuais compartilhados como `AuthShellCard`.
+- Use `app/pages/login.vue` como referencia de padrao para organizar esses imports.
+
+## Regras para o Codex neste projeto
+
+Quando eu pedir uma nova tela ou componente para `apps/web`, siga estas regras por padrao:
+
+- Usar este design system como base visual.
+- Reutilizar primeiro os componentes de `app/components/ui`.
+- Manter a direcao visual dark cinematica com acento vermelho.
+- Criar novas variacoes apenas quando o kit atual nao cobrir a necessidade.
+- Se surgir um novo padrao recorrente, promovelo para componente reutilizavel em vez de repetir classes.
+
+## O que evitar
+
+- Fundos brancos ou beges como tema principal.
+- Botoes com aparencia generica de dashboard SaaS.
+- Inputs claros sem contraste com o fundo.
+- Mistura de muitos acentos de cor.
+- Cards sem profundidade visual.
+- Interfaces com cara utilitaria quando a tela pede ambientacao institucional ou premium.

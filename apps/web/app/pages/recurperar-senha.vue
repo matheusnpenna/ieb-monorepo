@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import AuthShellCard from '../components/auth/AuthShellCard.vue'
 import { getRequestErrorMessage } from '../lib/utils'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
+import UiInput from '../components/ui/UiInput.vue'
 
 definePageMeta({
   layout: 'auth'
@@ -49,22 +53,20 @@ const onSubmit = async () => {
     subtitle="Insira seu e-mail e clique em enviar, para receber um link de recuperação de senha"
   >
     <form class="form-grid" @submit.prevent="onSubmit">
-      <label class="field-label">
-        E-mail
-        <input
+      <UiField label="E-mail" required>
+        <UiInput
           v-model="form.email"
           type="email"
-          class="input-field"
           placeholder="voce@exemplo.com"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
       <p v-if="feedbackMessage" class="feedback-message" :data-tone="feedbackTone">{{ feedbackMessage }}</p>
 
-      <button type="submit" class="button-primary" :disabled="pending">
+      <UiButton type="submit" block :loading="pending" :disabled="pending">
         {{ pending ? 'Enviando...' : 'Enviar' }}
-      </button>
+      </UiButton>
     </form>
   </AuthShellCard>
 </template>

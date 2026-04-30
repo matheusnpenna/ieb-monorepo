@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { AuthSuccessResponse } from '@ieb/shared'
+import AuthShellCard from '../components/auth/AuthShellCard.vue'
 import { useAuthSession } from '../composables/use-auth-session'
 import { getRequestErrorMessage, resolveSafeRedirect } from '../lib/utils'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
+import UiInput from '../components/ui/UiInput.vue'
 
 definePageMeta({
   layout: 'auth'
@@ -53,33 +57,29 @@ const onSubmit = async () => {
     subtitle="Bem vindo(a) de volta"
   >
     <form class="form-grid" @submit.prevent="onSubmit">
-      <label class="field-label">
-        E-mail
-        <input
+      <UiField label="E-mail" required>
+        <UiInput
           v-model="form.email"
           type="email"
-          class="input-field"
           placeholder="voce@exemplo.com"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
-      <label class="field-label">
-        Senha
-        <input
+      <UiField label="Senha" required>
+        <UiInput
           v-model="form.password"
           type="password"
-          class="input-field"
           placeholder="Sua senha"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
       <p v-if="feedbackMessage" class="feedback-message" data-tone="error">{{ feedbackMessage }}</p>
 
-      <button type="submit" class="button-primary" :disabled="pending">
+      <UiButton type="submit" block :loading="pending" :disabled="pending">
         {{ pending ? 'Entrando...' : 'Entrar' }}
-      </button>
+      </UiButton>
       <NuxtLink to="/recurperar-senha" class="body-copy">Esqueci minha senha</NuxtLink>
     </form>
   </AuthShellCard>

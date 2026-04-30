@@ -41,9 +41,9 @@ const onLogout = async () => {
 
         <div class="nav-actions">
           <span v-if="user" class="pill">{{ user.fullName }}</span>
-          <button type="button" class="button-secondary" :disabled="isLoggingOut" @click="onLogout">
+          <UiButton type="button" variant="secondary" size="sm" :disabled="isLoggingOut" @click="onLogout">
             {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
-          </button>
+          </UiButton>
         </div>
       </div>
     </header>

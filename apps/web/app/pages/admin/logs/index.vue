@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import PageIntro from '../../../components/base/PageIntro.vue'
+import SurfaceCard from '../../../components/base/SurfaceCard.vue'
+
 definePageMeta({
   layout: 'admin'
 })
@@ -27,4 +30,3 @@ const logColumns = ['ator', 'acao', 'colecao', 'alvo', 'data']
     </div>
   </SurfaceCard>
 </template>
-

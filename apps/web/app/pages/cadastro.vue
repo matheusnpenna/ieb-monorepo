@@ -4,8 +4,13 @@ import type {
   RegistrationStatusResponse,
   UserRegion
 } from '@ieb/shared'
+import AuthShellCard from '../components/auth/AuthShellCard.vue'
 import { useAuthSession } from '../composables/use-auth-session'
 import { getRequestErrorMessage } from '../lib/utils'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
+import UiInput from '../components/ui/UiInput.vue'
+import UiSelect from '../components/ui/UiSelect.vue'
 
 definePageMeta({
   layout: 'auth'
@@ -103,76 +108,65 @@ const onSubmit = async () => {
     </p>
 
     <form v-if="canRegister" class="form-grid" @submit.prevent="onSubmit">
-      <label class="field-label">
-        Nome
-        <input
+      <UiField label="Nome" required>
+        <UiInput
           v-model="form.fullName"
           type="text"
-          class="input-field"
           placeholder="Seu nome completo"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
-      <label class="field-label">
-        CPF
-        <input
+      <UiField label="CPF" required>
+        <UiInput
           v-model="form.cpf"
           type="text"
-          class="input-field"
           placeholder="000.000.000-00"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
-      <label class="field-label">
-        E-mail
-        <input
+      <UiField label="E-mail" required>
+        <UiInput
           v-model="form.email"
           type="email"
-          class="input-field"
           placeholder="voce@exemplo.com"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
-      <label class="field-label">
-        Senha
-        <input
+      <UiField label="Senha" required>
+        <UiInput
           v-model="form.password"
           type="password"
-          class="input-field"
           placeholder="Crie uma senha"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
-      <label class="field-label">
-        Confirmação de senha
-        <input
+      <UiField label="Confirmacao de senha" required>
+        <UiInput
           v-model="form.passwordConfirmation"
           type="password"
-          class="input-field"
           placeholder="Repita sua senha"
           :disabled="pending"
         />
-      </label>
+      </UiField>
 
-      <label class="field-label">
-        Você é membro da Comunidade Videira em qual região?
-        <select v-model="form.region" class="select-field" :disabled="pending">
+      <UiField label="Regiao da Comunidade Videira" required>
+        <UiSelect v-model="form.region" :disabled="pending">
           <option value="feira-de-santana">Feira de Santana</option>
           <option value="panambi">Panambi</option>
           <option value="sertao">Sertão</option>
           <option value="aluno-externo">Sou aluno externo</option>
-        </select>
-      </label>
+        </UiSelect>
+      </UiField>
 
       <p v-if="feedbackMessage" class="feedback-message" data-tone="error">{{ feedbackMessage }}</p>
 
-      <button type="submit" class="button-primary" :disabled="pending">
+      <UiButton type="submit" block :loading="pending" :disabled="pending">
         {{ pending ? 'Criando cadastro...' : 'Criar cadastro' }}
-      </button>
+      </UiButton>
     </form>
   </AuthShellCard>
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageIntro from '../../components/base/PageIntro.vue'
+
 definePageMeta({
   layout: 'admin'
 })
@@ -33,4 +35,3 @@ const metrics = [
     </section>
   </div>
 </template>
-

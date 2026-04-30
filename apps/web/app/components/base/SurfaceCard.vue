@@ -10,14 +10,7 @@ withDefaults(
 </script>
 
 <template>
-  <component :is="as" class="glass-panel surface-card">
+  <UiPanel :as="as">
     <slot />
-  </component>
+  </UiPanel>
 </template>
-
-<style scoped>
-.surface-card {
-  padding: 1.35rem;
-}
-</style>
-

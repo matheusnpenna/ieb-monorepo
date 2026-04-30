@@ -6,21 +6,14 @@ defineProps<{
 </script>
 
 <template>
-  <SurfaceCard class="auth-shell">
-    <div class="section-stack">
+  <UiPanel tone="strong" padding="lg" class="w-full max-w-[520px]">
+    <div class="grid gap-6">
       <BrandMark />
-      <div class="section-stack">
+      <div class="grid gap-4">
         <h1 class="section-title">{{ title }}</h1>
         <p class="body-copy">{{ subtitle }}</p>
       </div>
       <slot />
     </div>
-  </SurfaceCard>
+  </UiPanel>
 </template>
-
-<style scoped>
-.auth-shell {
-  width: min(100%, 520px);
-}
-</style>
-

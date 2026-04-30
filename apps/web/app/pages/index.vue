@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import PageIntro from '../components/base/PageIntro.vue'
+import SurfaceCard from '../components/base/SurfaceCard.vue'
+
 useSeoMeta({
   title: 'Institucional'
 })
@@ -62,4 +65,3 @@ const featureItems = [
     </section>
   </div>
 </template>
-

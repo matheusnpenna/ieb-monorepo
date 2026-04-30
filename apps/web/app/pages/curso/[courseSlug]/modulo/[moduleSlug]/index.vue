@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SurfaceCard from '../../../../../components/base/SurfaceCard.vue'
+
 definePageMeta({
   layout: 'content'
 })
@@ -65,4 +67,3 @@ const assessmentHref = computed(
     </SurfaceCard>
   </div>
 </template>
-
