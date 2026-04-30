@@ -1,21 +1,51 @@
 <script setup lang="ts">
+import { useAuthSession } from '../composables/use-auth-session'
+
+const { user, clearUser } = useAuthSession()
+const isLoggingOut = ref(false)
+
 const links = [
   { label: 'Home', to: '/home' },
   { label: 'Cursos', to: '/curso/fundamentos-da-videira' },
   { label: 'Continuar assistindo', to: '/home#continuar' },
   { label: 'Perfil', to: '/home#perfil' }
 ]
+
+const onLogout = async () => {
+  isLoggingOut.value = true
+
+  try {
+    await $fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    })
+  } finally {
+    clearUser()
+    isLoggingOut.value = false
+    await navigateTo('/login')
+  }
+}
 </script>
 
 <template>
   <div class="content-layout">
     <header class="page-shell content-header">
       <BrandMark />
-      <nav class="nav-links">
-        <NuxtLink v-for="link in links" :key="link.to" :to="link.to">
-          {{ link.label }}
-        </NuxtLink>
-      </nav>
+      <div class="nav-group">
+        <nav class="nav-links">
+          <NuxtLink v-for="link in links" :key="link.to" :to="link.to">
+            {{ link.label }}
+          </NuxtLink>
+          <NuxtLink v-if="user?.role === 'admin'" to="/admin">Admin</NuxtLink>
+        </nav>
+
+        <div class="nav-actions">
+          <span v-if="user" class="pill">{{ user.fullName }}</span>
+          <button type="button" class="button-secondary" :disabled="isLoggingOut" @click="onLogout">
+            {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
+          </button>
+        </div>
+      </div>
     </header>
 
     <main class="page-shell">
@@ -44,11 +74,29 @@ const links = [
   color: var(--color-muted);
 }
 
+.nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .content-header {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .nav-group {
+    justify-content: flex-start;
+  }
 }
 </style>
-

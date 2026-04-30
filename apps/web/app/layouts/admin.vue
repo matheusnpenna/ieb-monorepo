@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { useAuthSession } from '../composables/use-auth-session'
+
+const { user, clearUser } = useAuthSession()
+const isLoggingOut = ref(false)
+
 const menu = [
   { label: 'Visao geral', to: '/admin' },
   { label: 'Cursos', to: '/admin/cursos' },
@@ -10,17 +15,39 @@ const menu = [
   { label: 'Logs', to: '/admin/logs' },
   { label: 'Destaques', to: '/admin/destaques' }
 ]
+
+const onLogout = async () => {
+  isLoggingOut.value = true
+
+  try {
+    await $fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    })
+  } finally {
+    clearUser()
+    isLoggingOut.value = false
+    await navigateTo('/login')
+  }
+}
 </script>
 
 <template>
   <div class="admin-layout page-shell">
     <aside class="glass-panel sidebar">
       <BrandMark />
+      <div class="section-stack">
+        <span class="pill">{{ user?.fullName || 'Administrador' }}</span>
+        <NuxtLink to="/home" class="body-copy">Ir para a plataforma</NuxtLink>
+      </div>
       <nav class="sidebar-nav">
         <NuxtLink v-for="item in menu" :key="item.to" :to="item.to">
           {{ item.label }}
         </NuxtLink>
       </nav>
+      <button type="button" class="button-secondary" :disabled="isLoggingOut" @click="onLogout">
+        {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
+      </button>
     </aside>
 
     <main class="admin-content">
@@ -67,4 +94,3 @@ const menu = [
   }
 }
 </style>
-

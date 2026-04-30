@@ -56,7 +56,7 @@ export default defineNuxtConfig({
       clientEmail: process.env.NUXT_FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.NUXT_FIREBASE_PRIVATE_KEY,
       databaseUrl: process.env.NUXT_FIREBASE_DATABASE_URL,
-      apiKey: process.env.NUXT_FIREBASE_DATABASE_URL,
+      apiKey: process.env.NUXT_FIREBASE_API_KEY,
       authDomain: process.env.NUXT_FIREBASE_AUTH_DOMAIN,
       projectId: process.env.NUXT_FIREBASE_PROJECT_ID,
       storageBucket: process.env.NUXT_FIREBASE_STORAGE_BUCKET,
@@ -64,8 +64,8 @@ export default defineNuxtConfig({
       appId: process.env.NUXT_FIREBASE_APP_ID
     },
     session: {
-      cookieName: 'ieb_session',
-      cookieMaxAge: 60 * 60 * 24 * 7
+      cookieName: process.env.NUXT_SESSION_COOKIE_NAME || 'ieb_session',
+      cookieMaxAge: Number(process.env.NUXT_SESSION_COOKIE_MAX_AGE || 60 * 60 * 24 * 7)
     },
     public: {
       appName: 'Instituto Eurico Bergsten',
@@ -78,4 +78,3 @@ export default defineNuxtConfig({
     typeCheck: true
   }
 })
-
