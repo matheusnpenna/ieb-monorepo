@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BrandMark from '../base/BrandMark.vue'
+
 defineProps<{
   title: string
   subtitle: string

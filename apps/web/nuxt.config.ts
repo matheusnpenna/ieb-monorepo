@@ -18,6 +18,7 @@ export default defineNuxtConfig({
       titleTemplate: '%s | Instituto Eurico Bergsten',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'theme-color', content: '#090909' },
         {
           name: 'description',
           content:
@@ -37,6 +38,11 @@ export default defineNuxtConfig({
         {
           rel: 'stylesheet',
           href: 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap'
+        },
+        {
+          rel: 'icon',
+          type: 'image/svg+xml',
+          href: '/favicon.svg'
         }
       ],
       script: [

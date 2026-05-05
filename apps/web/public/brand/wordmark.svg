@@ -1,0 +1,76 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="560"
+  height="152"
+  viewBox="0 0 560 152"
+  fill="none"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">Comunidade Videira</title>
+  <desc id="desc">Wordmark tipografico com assinatura do Instituto Eurico Bergsten.</desc>
+  <defs>
+    <radialGradient id="wordmark-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(28 24) rotate(53.3497) scale(31.5589 30.0628)">
+      <stop stop-color="#FF4D57" stop-opacity=".72" />
+      <stop offset="1" stop-color="#FF4D57" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="wordmark-panel" x1="50" y1="8" x2="50" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202020" />
+      <stop offset="1" stop-color="#090909" />
+    </linearGradient>
+    <linearGradient id="wordmark-accent" x1="50" y1="22" x2="50" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF414D" />
+      <stop offset=".55" stop-color="#E50914" />
+      <stop offset="1" stop-color="#9D0610" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(0 18)">
+    <rect width="100" height="100" rx="28" fill="#050505" />
+    <circle cx="28" cy="24" r="28" fill="url(#wordmark-glow)" />
+    <rect x="8" y="8" width="84" height="84" rx="22" fill="url(#wordmark-panel)" stroke="#FFFFFF" stroke-opacity=".11" stroke-width="2" />
+    <path d="M24 22H37.4L50 60.5L62.6 22H76L56.8 78H43.2L24 22Z" fill="url(#wordmark-accent)" />
+    <path
+      d="M24 22H37.4L50 60.5L62.6 22H76"
+      stroke="#FFFFFF"
+      stroke-opacity=".16"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <text
+    x="122"
+    y="42"
+    fill="#FF5E66"
+    font-family="Manrope, Arial, sans-serif"
+    font-size="13"
+    font-weight="800"
+    letter-spacing=".32em"
+  >
+    INSTITUTO EURICO BERGSTEN
+  </text>
+  <text
+    x="122"
+    y="92"
+    fill="#F5F5F1"
+    font-family="Fraunces, Georgia, serif"
+    font-size="40"
+    font-weight="700"
+    letter-spacing="-.05em"
+  >
+    Comunidade
+  </text>
+  <text
+    x="122"
+    y="132"
+    fill="#F5F5F1"
+    font-family="Fraunces, Georgia, serif"
+    font-size="40"
+    font-weight="700"
+    letter-spacing="-.05em"
+  >
+    Videira
+  </text>
+</svg>

@@ -44,6 +44,19 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiTextarea`: textarea padrao.
 - `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 
+## Marca e assets
+
+- `BrandMark` e a assinatura oficial da experiencia web.
+- A hierarquia da marca deve manter:
+  - assinatura institucional `Instituto Eurico Bergsten`
+  - wordmark principal `Comunidade Videira`
+- O simbolo oficial usa um monograma `V` em vermelho sobre painel escuro.
+- Assets publicos da marca ficam em:
+  - `public/brand/mark.svg`
+  - `public/brand/wordmark.svg`
+  - `public/favicon.svg`
+- Reutilizar esses arquivos antes de criar novas variacoes de logo ou favicon.
+
 ## Regras de uso para novas telas
 
 - Toda nova tela deve partir de fundo escuro. Nao usar paginas claras como padrao.

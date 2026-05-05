@@ -1,0 +1,58 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="64"
+  height="64"
+  viewBox="0 0 64 64"
+  fill="none"
+  role="img"
+  aria-labelledby="title"
+>
+  <title id="title">Instituto Eurico Bergsten favicon</title>
+  <defs>
+    <radialGradient id="favicon-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(17 14) rotate(53.3497) scale(20.2756 19.3147)">
+      <stop stop-color="#FF4D57" stop-opacity=".78" />
+      <stop offset="1" stop-color="#FF4D57" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="favicon-panel" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202020" />
+      <stop offset="1" stop-color="#090909" />
+    </linearGradient>
+    <linearGradient id="favicon-accent" x1="32" y1="13" x2="32" y2="51" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF414D" />
+      <stop offset=".55" stop-color="#E50914" />
+      <stop offset="1" stop-color="#9D0610" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#050505" />
+  <circle cx="17" cy="14" r="20" fill="url(#favicon-glow)" />
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#favicon-panel)" stroke="#FFFFFF" stroke-opacity=".11" stroke-width="2" />
+  <text
+    x="32"
+    y="38"
+    fill="url(#favicon-accent)"
+    font-family="Manrope, Arial, sans-serif"
+    font-size="18"
+    font-weight="800"
+    letter-spacing="0.03em"
+    text-anchor="middle"
+  >
+    IEB
+  </text>
+  <text
+    x="32"
+    y="38"
+    fill="#FFFFFF"
+    fill-opacity=".18"
+    font-family="Manrope, Arial, sans-serif"
+    font-size="18"
+    font-weight="800"
+    letter-spacing="0.03em"
+    text-anchor="middle"
+    paint-order="stroke"
+    stroke="#FFFFFF"
+    stroke-opacity=".08"
+    stroke-width=".7"
+  >
+    IEB
+  </text>
+</svg>
