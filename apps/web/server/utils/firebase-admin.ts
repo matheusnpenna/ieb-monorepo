@@ -1,6 +1,7 @@
+import type { FirestoreCollections } from '@ieb/shared'
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getFirestore, type Firestore } from 'firebase-admin/firestore'
 
 interface FirebaseAdminRuntimeConfig {
   firebase: {
@@ -32,3 +33,13 @@ export const getFirebaseAdminApp = () => {
 
 export const getFirebaseAdminAuth = () => getAuth(getFirebaseAdminApp())
 export const getFirebaseAdminFirestore = () => getFirestore(getFirebaseAdminApp())
+
+const FIRESTORE_COLLECTION_PREFIX = 'v2_' as const
+
+export const getFirestoreCollectionName = (collectionName: FirestoreCollections) =>
+  `${FIRESTORE_COLLECTION_PREFIX}${collectionName}` as const
+
+export const getFirebaseAdminCollection = (
+  collectionName: FirestoreCollections,
+  firestore: Firestore = getFirebaseAdminFirestore()
+) => firestore.collection(getFirestoreCollectionName(collectionName))

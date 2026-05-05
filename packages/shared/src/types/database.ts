@@ -210,3 +210,4 @@ export type FirestoreCollections =
   | 'highlights'
   | 'adminLogs'
 
+export type FirestoreCollectionName = `v2_${FirestoreCollections}`

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UiPanel from '../ui/UiPanel.vue';
+import UiButton from '../ui/UiButton.vue';
 defineProps<{
   title: string
   description: string

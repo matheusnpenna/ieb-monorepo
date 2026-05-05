@@ -1,18 +1,15 @@
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
+import 'dotenv/config'
+console.log('Running Nuxt with TypeScript version:', process.env.TS_VERSION)
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   ssr: false,
-  modules: ['shadcn-nuxt'],
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()]
-  },
-  shadcn: {
-    prefix: '',
-    componentDir: './app/components/ui'
   },
   alias: {
     '@ieb/shared': fileURLToPath(new URL('../../packages/shared/src', import.meta.url))

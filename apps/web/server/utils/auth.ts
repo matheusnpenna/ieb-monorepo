@@ -6,8 +6,8 @@ import type {
   RegistrationStatusResponse,
   User
 } from '@ieb/shared'
-import { HTTPError, deleteCookie, getCookie, getRequestProtocol, setCookie, type H3Event } from 'h3'
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from './firebase-admin'
+import { HTTPError, deleteCookie, getHeader, getCookie, getRequestProtocol, setCookie, type H3Event } from 'h3'
+import { getFirebaseAdminAuth, getFirebaseAdminCollection, getFirebaseAdminFirestore } from './firebase-admin'
 
 interface SessionRuntimeConfig {
   firebase: {
@@ -113,7 +113,7 @@ const callIdentityToolkit = async <TResponse>(path: string, body: Record<string,
 }
 
 const isSecureCookieRequest = (event: H3Event) => {
-  const forwardedProto = event.req.headers.get('x-forwarded-proto')
+  const forwardedProto = getHeader(event, 'x-forwarded-proto')
   const protocol = getRequestProtocol(event)
 
   return process.env.NODE_ENV === 'production' || forwardedProto === 'https' ||  protocol === 'https'
@@ -146,6 +146,9 @@ export const clearAuthSessionCookie = (event: H3Event) => {
 
 const getAuthSessionCookie = (event: H3Event) => {
   const config = getSessionConfig()
+  console.log("########### DEBUG #####################")
+  console.log(config.firebase)
+  console.log("########### DEBUG #####################")
   return getCookie(event, config.session.cookieName)
 }
 
@@ -192,7 +195,7 @@ const buildDefaultUserDocument = (uid: string, email: string, displayName?: stri
 }
 
 const getUserDocumentById = async (uid: string) => {
-  const snapshot = await getFirebaseAdminFirestore().collection('users').doc(uid).get()
+  const snapshot = await getFirebaseAdminCollection('users').doc(uid).get()
 
   if (!snapshot.exists) {
     return null
@@ -214,7 +217,7 @@ const ensureUserDocument = async (uid: string, email: string) => {
   const authRecord = await getFirebaseAdminAuth().getUser(uid)
   const userDocument = buildDefaultUserDocument(uid, authRecord.email || email, authRecord.displayName)
 
-  await getFirebaseAdminFirestore().collection('users').doc(uid).set(userDocument)
+  await getFirebaseAdminCollection('users').doc(uid).set(userDocument)
 
   return userDocument
 }
@@ -222,7 +225,7 @@ const ensureUserDocument = async (uid: string, email: string) => {
 const updateLastLoginAt = async (uid: string) => {
   const now = toTimestamp()
 
-  await getFirebaseAdminFirestore().collection('users').doc(uid).set(
+  await getFirebaseAdminCollection('users').doc(uid).set(
     {
       updatedAt: now,
       lastLoginAt: now
@@ -291,8 +294,7 @@ export const requireAuthSession = async (event: H3Event, options?: { admin?: boo
 }
 
 const getClassroomByUuid = async (classroomUuid: string) => {
-  const snapshot = await getFirebaseAdminFirestore()
-    .collection('classrooms')
+  const snapshot = await getFirebaseAdminCollection('classrooms')
     .where('uuid', '==', classroomUuid)
     .limit(1)
     .get()
@@ -396,7 +398,7 @@ const assertRegisterPayload = (input: RegisterAccountInput) => {
 }
 
 const assertCpfIsAvailable = async (cpf: string) => {
-  const snapshot = await getFirebaseAdminFirestore().collection('users').where('cpf', '==', cpf).limit(5).get()
+  const snapshot = await getFirebaseAdminCollection('users').where('cpf', '==', cpf).limit(5).get()
   const activeMatch = snapshot.docs
     .map((doc) => doc.data() as User)
     .find((user) => user.id && !user.deletedAt)
@@ -433,7 +435,7 @@ const createUserAndEnrollments = async (uid: string, input: RegisterAccountInput
   const now = toTimestamp()
   const normalizedEmail = normalizeEmail(input.email)
   const normalizedCpf = normalizeCpf(input.cpf)
-  const userRef = firestore.collection('users').doc(uid)
+  const userRef = getFirebaseAdminCollection('users', firestore).doc(uid)
 
   const userDocument: User = {
     id: uid,
@@ -457,7 +459,7 @@ const createUserAndEnrollments = async (uid: string, input: RegisterAccountInput
   batch.set(userRef, userDocument)
 
   classroom.linkedCourseIds.forEach((courseId) => {
-    const enrollmentRef = firestore.collection('enrollments').doc()
+    const enrollmentRef = getFirebaseAdminCollection('enrollments', firestore).doc()
     const enrollment: CourseEnrollment = {
       id: enrollmentRef.id,
       userId: uid,
@@ -559,7 +561,7 @@ export const writeAdminLog = async (
 
   const firestore = getFirebaseAdminFirestore()
   const now = toTimestamp()
-  const logRef = firestore.collection('adminLogs').doc()
+  const logRef = getFirebaseAdminCollection('adminLogs', firestore).doc()
 
   await logRef.set({
     id: logRef.id,
