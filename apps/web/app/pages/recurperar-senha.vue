@@ -67,6 +67,7 @@ const onSubmit = async () => {
       <UiButton type="submit" block :loading="pending" :disabled="pending">
         {{ pending ? 'Enviando...' : 'Enviar' }}
       </UiButton>
+      <NuxtLink to="/login" class="body-copy">Voltar para o login</NuxtLink>
     </form>
   </AuthShellCard>
 </template>
