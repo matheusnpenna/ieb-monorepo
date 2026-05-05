@@ -6,7 +6,7 @@ import type {
   RegistrationStatusResponse,
   User
 } from '@ieb/shared'
-import { HTTPError, deleteCookie, getHeader, getCookie, getRequestProtocol, setCookie, type H3Event } from 'h3'
+import { createError, deleteCookie, getHeader, getCookie, getRequestProtocol, setCookie, type H3Event } from 'h3'
 import { getFirebaseAdminAuth, getFirebaseAdminCollection, getFirebaseAdminFirestore } from './firebase-admin'
 
 interface SessionRuntimeConfig {
@@ -55,7 +55,7 @@ const normalizeEmail = (value: string) => value.trim().toLowerCase()
 const normalizeCpf = (value: string) => value.replace(/\D/g, '')
 
 const createHttpError = (statusCode: number, statusMessage: string) =>
-  new HTTPError({
+  createError({
     statusCode,
     statusMessage
   })
@@ -146,9 +146,6 @@ export const clearAuthSessionCookie = (event: H3Event) => {
 
 const getAuthSessionCookie = (event: H3Event) => {
   const config = getSessionConfig()
-  console.log("########### DEBUG #####################")
-  console.log(config.firebase)
-  console.log("########### DEBUG #####################")
   return getCookie(event, config.session.cookieName)
 }
 

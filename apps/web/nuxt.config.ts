@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import 'dotenv/config'
-console.log('Running Nuxt with TypeScript version:', process.env.TS_VERSION)
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -50,15 +49,15 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     firebase: {
-      clientEmail: process.env.NUXT_FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.NUXT_FIREBASE_PRIVATE_KEY,
-      databaseUrl: process.env.NUXT_FIREBASE_DATABASE_URL,
-      apiKey: process.env.NUXT_FIREBASE_API_KEY,
-      authDomain: process.env.NUXT_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NUXT_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NUXT_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NUXT_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NUXT_FIREBASE_APP_ID
+      clientEmail: '',
+      privateKey: '',
+      databaseUrl: '',
+      apiKey: '',
+      authDomain: '',
+      projectId: '',
+      storageBucket: '',
+      messagingSenderId: '',
+      appId: ''
     },
     session: {
       cookieName: process.env.NUXT_SESSION_COOKIE_NAME || 'ieb_session',
