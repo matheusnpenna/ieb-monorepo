@@ -96,10 +96,22 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Se um ajuste afeta dominio, auth, Firestore ou payloads de API, atualizar os tipos compartilhados junto com o consumo.
 - Evitar duplicar interfaces entre `apps/web` e `packages/shared`.
 
+## Estrutura de testes
+
+- Todo teste deve viver dentro do app ou pacote ao qual ele pertence.
+- Para o app web, usar obrigatoriamente `apps/web/tests`.
+- Nao criar testes do `apps/web` na raiz do monorepo em `tests/`.
+- Organizacao padrao do app web:
+  - `apps/web/tests/server`: testes de handlers, endpoints e utilitarios de backend
+  - `apps/web/tests/nuxt`: testes que dependem do runtime do Nuxt
+- Ao criar um novo app no monorepo, repetir o mesmo padrao: testes dentro do proprio app.
+- Ao configurar comandos de teste, preferir scripts no `package.json` do proprio app e usar a raiz apenas como proxy para esses scripts.
+
 ## Validacao minima
 
 - Para alteracoes pequenas, validar pelo menos com `typecheck` quando possivel.
 - Para alteracoes de config ou dependencias, validar tambem com `postinstall` para regenerar artefatos do Nuxt.
+- Para alteracoes em testes do app web, validar com `pnpm --filter @ieb/web test:server` ou `pnpm --filter @ieb/web test`.
 - Para alteracoes que tocam auth, cookies, `runtimeConfig` ou Firebase, revisar tambem:
   - `apps/web/server/utils/auth.ts`
   - `apps/web/server/utils/firebase-admin.ts`

@@ -36,7 +36,7 @@ vi.mock('h3', async () => {
   }
 })
 
-vi.mock('../../../apps/web/server/utils/auth', () => ({
+vi.mock('../../../server/utils/auth', () => ({
   loginWithEmailAndPassword,
   writeAdminLog,
   clearAuthSessionCookie,
@@ -46,12 +46,12 @@ vi.mock('../../../apps/web/server/utils/auth', () => ({
   getRegistrationStatus
 }))
 
-import loginHandler from '../../../apps/web/server/api/auth/login.post'
-import logoutHandler from '../../../apps/web/server/api/auth/logout.post'
-import passwordRecoveryHandler from '../../../apps/web/server/api/auth/password-recovery.post'
-import registerHandler from '../../../apps/web/server/api/auth/register.post'
-import registrationStatusHandler from '../../../apps/web/server/api/auth/registration-status.get'
-import sessionHandler from '../../../apps/web/server/api/auth/session.get'
+import loginHandler from '../../../server/api/auth/login.post'
+import logoutHandler from '../../../server/api/auth/logout.post'
+import passwordRecoveryHandler from '../../../server/api/auth/password-recovery.post'
+import registerHandler from '../../../server/api/auth/register.post'
+import registrationStatusHandler from '../../../server/api/auth/registration-status.get'
+import sessionHandler from '../../../server/api/auth/session.get'
 
 const sampleUser = {
   id: 'user-1',

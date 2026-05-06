@@ -7,7 +7,11 @@
     "build": "nuxt build",
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest run -c vitest.config.mts",
+    "test:watch": "vitest --project server -c vitest.config.mts",
+    "test:server": "vitest run --project server -c vitest.config.mts",
+    "test:nuxt": "vitest run --project nuxt -c vitest.config.mts"
   },
   "dependencies": {
     "@ieb/shared": "workspace:*",

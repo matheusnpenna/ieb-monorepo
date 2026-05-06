@@ -25,7 +25,7 @@ export default defineConfig({
           mockReset: true,
           environmentOptions: {
             nuxt: {
-              rootDir: fileURLToPath(new URL('./apps/web', import.meta.url))
+              rootDir: fileURLToPath(new URL('./', import.meta.url))
             }
           }
         }
