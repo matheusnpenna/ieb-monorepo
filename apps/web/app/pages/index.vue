@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import FeaturedBanner from '../components/content/FeaturedBanner.vue'
 import PageIntro from '../components/base/PageIntro.vue'
+import InstitutionalFeatureList from '../components/institutional/InstitutionalFeatureList.vue'
 import SurfaceCard from '../components/base/SurfaceCard.vue'
 
 useSeoMeta({

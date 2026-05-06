@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BrandMark from '../components/base/BrandMark.vue'
+import UiButton from '../components/ui/UiButton.vue'
 import { useAuthSession } from '../composables/use-auth-session'
 
 const { user, clearUser } = useAuthSession()
