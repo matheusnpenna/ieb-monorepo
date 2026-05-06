@@ -1,7 +1,7 @@
 import type { CourseListResponse } from '@ieb/shared'
-import { setResponseStatus } from 'h3'
-import { requireAuthSession } from '../utils/auth'
-import { listAccessibleCourses } from '../utils/courses'
+import { setResponseStatus, defineEventHandler } from 'h3'
+import { requireAuthSession } from '../../utils/auth'
+import { listAccessibleCourses } from '../../utils/courses'
 
 export default defineEventHandler(async (event): Promise<CourseListResponse> => {
   try {

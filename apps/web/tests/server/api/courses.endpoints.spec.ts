@@ -18,7 +18,7 @@ vi.mock('../../../server/utils/courses', () => ({
   listAccessibleCourses
 }))
 
-import coursesHandler from '../../../server/api/courses.get'
+import coursesHandler from '../../../server/api/courses/index.get'
 
 const sampleSession = {
   user: {

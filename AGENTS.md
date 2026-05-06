@@ -37,6 +37,8 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - O app Nuxt vive em `apps/web`.
 - O projeto roda como SPA no momento: `ssr: false`.
 - Se componentes, composables ou testes do app importarem diretamente de `vue`, o pacote `vue` deve permanecer declarado explicitamente em `apps/web/package.json`.
+- Preferir organizar endpoints do servidor por contexto em pastas dedicadas dentro de `apps/web/server/api`.
+- Sempre que possivel, usar estrutura como `api/courses/index.get.ts`, `api/courses/[id].get.ts`, `api/auth/login.post.ts` e similares, evitando concentrar muitos endpoints soltos diretamente em `api/`.
 - Segredos e variaveis de ambiente devem ficar em `runtimeConfig`.
 - Valores publicos devem ficar em `runtimeConfig.public`.
 - Ao usar variaveis de ambiente para sobrescrever `runtimeConfig`, seguir a nomenclatura do Nuxt para chaves aninhadas.
