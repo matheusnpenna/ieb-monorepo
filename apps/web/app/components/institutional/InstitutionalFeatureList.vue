@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SurfaceCard from '../base/SurfaceCard.vue';
+
 defineProps<{
   items: Array<{
     title: string

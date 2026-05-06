@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdminMetricCard from '../../components/admin/AdminMetricCard.vue'
 import PageIntro from '../../components/base/PageIntro.vue'
 
 definePageMeta({

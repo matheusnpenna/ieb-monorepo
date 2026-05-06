@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SurfaceCard from '../base/SurfaceCard.vue';
 defineProps<{
   label: string
   value: string

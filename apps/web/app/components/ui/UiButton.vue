@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, useAttrs } from 'vue'
+
 defineOptions({
   inheritAttrs: false
 })
@@ -75,7 +77,7 @@ const sizeClass = computed(() => {
     :aria-busy="loading ? 'true' : undefined"
     :disabled="componentTag === 'button' ? isDisabled : undefined"
     :class="[
-      'inline-flex items-center justify-center gap-2 rounded-full border font-semibold tracking-[0.01em] transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-4',
+      'cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border font-semibold tracking-[0.01em] transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-4',
       variantClass,
       sizeClass,
       block ? 'w-full' : 'w-auto',

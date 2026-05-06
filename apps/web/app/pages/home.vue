@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import CourseRail from '../components/content/CourseRail.vue'
+import FeaturedBanner from '../components/content/FeaturedBanner.vue'
+import AdminMetricCard from '../components/admin/AdminMetricCard.vue'
+
 definePageMeta({
   layout: 'content'
 })

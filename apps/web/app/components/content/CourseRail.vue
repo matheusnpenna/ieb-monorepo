@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageIntro from '../base/PageIntro.vue'
+
 interface CourseRailItem {
   id: string
   title: string

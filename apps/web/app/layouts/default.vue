@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BrandMark from '../components/base/BrandMark.vue'
+
 const links = [
   { label: 'Institucional', to: '/' },
   { label: 'Entrar', to: '/login' },
@@ -51,4 +53,3 @@ const links = [
   }
 }
 </style>
-
