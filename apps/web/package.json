@@ -11,7 +11,8 @@
     "test": "vitest run -c vitest.config.mts",
     "test:watch": "vitest --project server -c vitest.config.mts",
     "test:server": "vitest run --project server -c vitest.config.mts",
-    "test:nuxt": "vitest run --project nuxt -c vitest.config.mts"
+    "test:nuxt": "vitest run --project nuxt -c vitest.nuxt.config.mts",
+    "test:components": "vitest run --project components app/components -c vitest.config.mts"
   },
   "dependencies": {
     "@ieb/shared": "workspace:*",
@@ -23,6 +24,7 @@
     "nuxt": "^4.2.1"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^25.6.0",
     "dotenv": "^17.4.2",

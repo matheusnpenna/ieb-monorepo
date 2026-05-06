@@ -1,6 +1,21 @@
+import { readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineVitestProject } from '@nuxt/test-utils/config'
+import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
+
+const pnpmStoreDir = fileURLToPath(new URL('../../node_modules/.pnpm/', import.meta.url))
+const vuePackageDir = readdirSync(pnpmStoreDir).find((entry) => entry.startsWith('vue@'))
+
+if (!vuePackageDir) {
+  throw new Error('Unable to resolve the Vue package from the pnpm store.')
+}
+
+const vueRuntimePath = join(
+  pnpmStoreDir,
+  vuePackageDir,
+  'node_modules/vue/dist/vue.runtime.esm-bundler.js'
+)
 
 export default defineConfig({
   test: {
@@ -15,21 +30,22 @@ export default defineConfig({
           mockReset: true
         }
       },
-      await defineVitestProject({
+      {
+        plugins: [vue()],
+        resolve: {
+          alias: {
+            vue: vueRuntimePath
+          }
+        },
         test: {
-          name: 'nuxt',
-          include: ['tests/nuxt/**/*.nuxt.spec.ts'],
-          environment: 'nuxt',
+          name: 'components',
+          include: ['app/**/*.test.ts'],
+          environment: 'happy-dom',
           clearMocks: true,
           restoreMocks: true,
-          mockReset: true,
-          environmentOptions: {
-            nuxt: {
-              rootDir: fileURLToPath(new URL('./', import.meta.url))
-            }
-          }
+          mockReset: true
         }
-      })
+      }
     ]
   }
 })

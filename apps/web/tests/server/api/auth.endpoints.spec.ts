@@ -1,5 +1,6 @@
 import { createEvent } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node-mock-http'
+import { IncomingMessage, ServerResponse } from 'node:http'
+import { Socket } from 'node:net'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
@@ -64,7 +65,7 @@ const sampleUser = {
 } as const
 
 const createGetEvent = (url: string) => {
-  const req = new IncomingMessage()
+  const req = new IncomingMessage(new Socket())
   req.method = 'GET'
   req.url = url
   req.push(null)

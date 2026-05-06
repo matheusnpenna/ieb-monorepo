@@ -106,6 +106,15 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
   - `apps/web/tests/nuxt`: testes que dependem do runtime do Nuxt
 - Ao criar um novo app no monorepo, repetir o mesmo padrao: testes dentro do proprio app.
 - Ao configurar comandos de teste, preferir scripts no `package.json` do proprio app e usar a raiz apenas como proxy para esses scripts.
+- Para testes componentes frontend em qualquer app do monorepo, os testes devem ser co-localizados com o componente.
+- Padrao de nomenclatura obrigatorio:
+  - `UiButton.vue` -> `UiButton.test.ts`
+  - `UiInput.vue` -> `UiInput.test.ts`
+- No `apps/web`, testes de componente Vue devem usar `Vitest` no projeto `components`.
+- Para componentes de UI simples, preferir `mount` de `@vue/test-utils` em ambiente `happy-dom`.
+- Quando um componente depender de `NuxtLink` ou outro componente global do Nuxt, stubar explicitamente o componente no proprio teste ao inves de acoplar a spec inteira ao runtime `nuxt`.
+- Nao criar testes de componente Vue dentro de `apps/web/tests/server`.
+- Nao criar uma pasta centralizada para testes de componentes quando o teste puder ficar ao lado do proprio `.vue`.
 
 ## Validacao minima
 
