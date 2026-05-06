@@ -122,34 +122,6 @@ defineProps<{
   color: var(--ds-text);
 }
 
-.course-meta {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-}
-
-.course-meta-row {
-  display: grid;
-  gap: 0.3rem;
-}
-
-.course-meta-row dt {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ds-accent-strong);
-}
-
-.course-meta-row dd {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: rgba(245, 245, 241, 0.92);
-  word-break: break-word;
-}
-
 @media (min-width: 700px) {
   .course-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

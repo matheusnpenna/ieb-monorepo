@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppFooter from '../components/base/AppFooter.vue'
 import BrandMark from '../components/base/BrandMark.vue'
 import UiDropdownMenu from '../components/ui/UiDropdownMenu.vue'
 import { useAuthSession } from '../composables/use-auth-session'
@@ -75,6 +76,8 @@ const onAccountMenuSelect = async (itemId: string) => {
     <main class="page-shell">
       <slot />
     </main>
+
+    <AppFooter brand-to="/home" />
   </div>
 </template>
 

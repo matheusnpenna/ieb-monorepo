@@ -44,7 +44,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiTextarea`: textarea padrao.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
-- `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
+- `AppFooter`, `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 
 ## Marca e assets
 
@@ -68,6 +68,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.
 - Listagens principais de cursos na home ou vitrines semelhantes devem preferir `CourseGrid`.
+- O rodape compartilhado do site e da plataforma deve preferir `AppFooter`.
 - Evitar `button`, `input`, `select` e `textarea` crus quando houver componente equivalente.
 - Evitar cores novas sem necessidade real. O vermelho oficial e a ancora visual do sistema.
 - Preferir cantos arredondados amplos, profundidade por sombra e contraste por camadas, nao por excesso de bordas.
@@ -94,6 +95,13 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Cada card deve exibir capa, titulo, descricao curta, slug e meta resumida do curso.
 - O hover da capa deve ampliar somente a imagem interna, sem aumentar o tamanho externo do card.
 - Quando `coverImageUrl` estiver ausente, usar o fallback `app/assets/img/logos/videira-logo.svg`.
+
+## Footer compartilhado
+
+- `AppFooter` e o padrao oficial de rodape para o site institucional e para a plataforma de conteudo.
+- O footer deve exibir `BrandMark`, informacoes institucionais, redes sociais e contato de suporte.
+- O ano deve ser resolvido em JavaScript no proprio componente.
+- O contato de suporte deve usar link direto para WhatsApp.
 
 ## Regras para o Codex neste projeto
 

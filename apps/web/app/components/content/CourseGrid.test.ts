@@ -38,7 +38,7 @@ describe('CourseGrid', () => {
 
     expect(wrapper.get('a').attributes('href')).toBe('/curso/fundamentos-da-videira')
     expect(wrapper.text()).toContain('8 modulos')
-    expect(wrapper.text()).toContain('fundamentos-da-videira')
+    expect(wrapper.text()).toContain('Fundamentos da Videira')
   })
 
   it('uses the svg fallback when the course has no cover image', () => {
