@@ -80,6 +80,11 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Nunca expor credenciais privadas do Firebase em codigo cliente, logs ou respostas HTTP.
 - Em operacoes de exclusao, preservar a estrategia de soft delete do projeto.
 - Acoes administrativas relevantes devem continuar registrando rastreabilidade.
+- Para endpoints que nao sejam relacionados a autenticacao, usar como padrao de resposta:
+  - sucesso: `{ status: 'success', message?: string, data: T }`
+  - erro: `{ status: 'error', messages: string[], data: T }`
+- Em respostas de erro, manter tambem o status HTTP correto e preencher `messages` com a mensagem retornada ao cliente.
+- Endpoints de autenticacao sao excecao e podem manter o contrato proprio ja adotado no projeto.
 
 ## Regra critica sobre h3
 
