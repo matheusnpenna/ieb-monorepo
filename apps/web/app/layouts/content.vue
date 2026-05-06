@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BrandMark from '../components/base/BrandMark.vue'
-import UiButton from '../components/ui/UiButton.vue'
+import UiDropdownMenu from '../components/ui/UiDropdownMenu.vue'
 import { useAuthSession } from '../composables/use-auth-session'
 
 const { user, clearUser } = useAuthSession()
@@ -9,9 +9,19 @@ const isLoggingOut = ref(false)
 const links = [
   { label: 'Home', to: '/home' },
   { label: 'Cursos', to: '/curso/fundamentos-da-videira' },
-  { label: 'Continuar assistindo', to: '/home#continuar' },
-  { label: 'Perfil', to: '/home#perfil' }
 ]
+
+const accountMenuItems = computed(() => [
+  { id: 'account', label: 'Dados da conta', to: '/home#perfil' },
+  { id: 'exams', label: 'Minhas provas', to: '/home#provas' },
+  { id: 'password', label: 'Trocar a senha', to: '/recurperar-senha' },
+  {
+    id: 'logout',
+    label: isLoggingOut.value ? 'Saindo...' : 'Sair',
+    tone: 'danger' as const,
+    disabled: isLoggingOut.value
+  }
+])
 
 const onLogout = async () => {
   isLoggingOut.value = true
@@ -26,6 +36,14 @@ const onLogout = async () => {
     isLoggingOut.value = false
     await navigateTo('/login')
   }
+}
+
+const onAccountMenuSelect = async (itemId: string) => {
+  if (itemId !== 'logout' || isLoggingOut.value) {
+    return
+  }
+
+  await onLogout()
 }
 </script>
 
@@ -42,10 +60,14 @@ const onLogout = async () => {
         </nav>
 
         <div class="nav-actions">
-          <span v-if="user" class="pill">{{ user.fullName }}</span>
-          <UiButton type="button" variant="secondary" size="sm" :disabled="isLoggingOut" @click="onLogout">
-            {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
-          </UiButton>
+          <UiDropdownMenu
+            v-if="user"
+            :user-name="user.fullName"
+            :avatar-url="user.avatarUrl"
+            :items="accountMenuItems"
+            :busy-item-id="isLoggingOut ? 'logout' : null"
+            @select="onAccountMenuSelect"
+          />
         </div>
       </div>
     </header>

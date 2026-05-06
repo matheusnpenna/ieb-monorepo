@@ -42,6 +42,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiInput`: input padrao.
 - `UiSelect`: select padrao.
 - `UiTextarea`: textarea padrao.
+- `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
 - `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 
 ## Marca e assets
@@ -64,6 +65,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
+- Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.
 - Evitar `button`, `input`, `select` e `textarea` crus quando houver componente equivalente.
 - Evitar cores novas sem necessidade real. O vermelho oficial e a ancora visual do sistema.
 - Preferir cantos arredondados amplos, profundidade por sombra e contraste por camadas, nao por excesso de bordas.
@@ -75,6 +77,14 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Sempre importar no `<script setup>` todo componente do design system usado na pagina, mesmo que o auto-import do Nuxt esteja habilitado.
 - Esta regra vale para componentes em `app/components/ui`, `app/components/base` e shells visuais compartilhados como `AuthShellCard`.
 - Use `app/pages/login.vue` como referencia de padrao para organizar esses imports.
+
+## Dropdown de conta
+
+- `UiDropdownMenu` e o padrao oficial para dropdown acionado por avatar do usuario.
+- Quando houver `avatarUrl`, a imagem deve ser exibida no toggle.
+- Quando nao houver `avatarUrl`, o fallback deve usar as duas primeiras iniciais do nome.
+- Se o nome tiver apenas uma palavra, o fallback deve usar somente a primeira letra.
+- O menu deve manter superficie escura elevada, foco visivel e estados de hover discretos com acento vermelho.
 
 ## Regras para o Codex neste projeto
 
