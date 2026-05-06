@@ -43,6 +43,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiSelect`: select padrao.
 - `UiTextarea`: textarea padrao.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
+- `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
 - `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 
 ## Marca e assets
@@ -66,6 +67,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.
+- Listagens principais de cursos na home ou vitrines semelhantes devem preferir `CourseGrid`.
 - Evitar `button`, `input`, `select` e `textarea` crus quando houver componente equivalente.
 - Evitar cores novas sem necessidade real. O vermelho oficial e a ancora visual do sistema.
 - Preferir cantos arredondados amplos, profundidade por sombra e contraste por camadas, nao por excesso de bordas.
@@ -85,6 +87,13 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Quando nao houver `avatarUrl`, o fallback deve usar as duas primeiras iniciais do nome.
 - Se o nome tiver apenas uma palavra, o fallback deve usar somente a primeira letra.
 - O menu deve manter superficie escura elevada, foco visivel e estados de hover discretos com acento vermelho.
+
+## Grid de cursos
+
+- `CourseGrid` e o padrao oficial para vitrines de cursos em formato de cards.
+- Cada card deve exibir capa, titulo, descricao curta, slug e meta resumida do curso.
+- O hover da capa deve ampliar somente a imagem interna, sem aumentar o tamanho externo do card.
+- Quando `coverImageUrl` estiver ausente, usar o fallback `app/assets/img/logos/videira-logo.svg`.
 
 ## Regras para o Codex neste projeto
 
