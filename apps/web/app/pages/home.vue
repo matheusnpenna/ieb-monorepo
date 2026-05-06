@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CourseRail from '../components/content/CourseRail.vue'
 definePageMeta({
   layout: 'content'
 })

@@ -36,6 +36,7 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 
 - O app Nuxt vive em `apps/web`.
 - O projeto roda como SPA no momento: `ssr: false`.
+- Se componentes, composables ou testes do app importarem diretamente de `vue`, o pacote `vue` deve permanecer declarado explicitamente em `apps/web/package.json`.
 - Segredos e variaveis de ambiente devem ficar em `runtimeConfig`.
 - Valores publicos devem ficar em `runtimeConfig.public`.
 - Ao usar variaveis de ambiente para sobrescrever `runtimeConfig`, seguir a nomenclatura do Nuxt para chaves aninhadas.
@@ -104,6 +105,7 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Organizacao padrao do app web:
   - `apps/web/tests/server`: testes de handlers, endpoints e utilitarios de backend
   - `apps/web/tests/nuxt`: testes que dependem do runtime do Nuxt
+  - `apps/web/tests/e2e`: testes end-to-end com Playwright
 - Ao criar um novo app no monorepo, repetir o mesmo padrao: testes dentro do proprio app.
 - Ao configurar comandos de teste, preferir scripts no `package.json` do proprio app e usar a raiz apenas como proxy para esses scripts.
 - Para testes componentes frontend em qualquer app do monorepo, os testes devem ser co-localizados com o componente.
@@ -113,6 +115,11 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - No `apps/web`, testes de componente Vue devem usar `Vitest` no projeto `components`.
 - Para componentes de UI simples, preferir `mount` de `@vue/test-utils` em ambiente `happy-dom`.
 - Quando um componente depender de `NuxtLink` ou outro componente global do Nuxt, stubar explicitamente o componente no proprio teste ao inves de acoplar a spec inteira ao runtime `nuxt`.
+- Testes e2e do `apps/web` devem usar Playwright.
+- Padrao de nomenclatura obrigatorio para e2e:
+  - `[proposito_do_teste].e2e.test.ts`
+  - Exemplo: `auth.e2e.test.ts`
+- Fluxos e2e que dependem de autenticacao externa ou Firebase devem preferir `page.route(...)` para mockar as respostas HTTP quando o objetivo do teste for validar o comportamento do frontend e da navegacao.
 - Nao criar testes de componente Vue dentro de `apps/web/tests/server`.
 - Nao criar uma pasta centralizada para testes de componentes quando o teste puder ficar ao lado do proprio `.vue`.
 
@@ -121,6 +128,7 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Para alteracoes pequenas, validar pelo menos com `typecheck` quando possivel.
 - Para alteracoes de config ou dependencias, validar tambem com `postinstall` para regenerar artefatos do Nuxt.
 - Para alteracoes em testes do app web, validar com `pnpm --filter @ieb/web test:server` ou `pnpm --filter @ieb/web test`.
+- Para alteracoes em testes e2e do app web, validar com `pnpm --filter @ieb/web test:e2e` quando as dependencias do Playwright e os browsers estiverem instalados.
 - Para alteracoes que tocam auth, cookies, `runtimeConfig` ou Firebase, revisar tambem:
   - `apps/web/server/utils/auth.ts`
   - `apps/web/server/utils/firebase-admin.ts`

@@ -16,7 +16,9 @@
     "test:web:watch": "pnpm --filter @ieb/web test:watch",
     "test:web:server": "pnpm --filter @ieb/web test:server",
     "test:web:nuxt": "pnpm --filter @ieb/web test:nuxt",
-    "test:web:components": "pnpm --filter @ieb/web test:components"
+    "test:web:components": "pnpm --filter @ieb/web test:components",
+    "test:web:e2e": "pnpm --filter @ieb/web test:e2e",
+    "test:web:e2e:ui": "pnpm --filter @ieb/web test:e2e:ui"
   },
   "devDependencies": {
     "@nuxt/test-utils": "^4.0.3",

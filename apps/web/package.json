@@ -12,7 +12,10 @@
     "test:watch": "vitest --project server -c vitest.config.mts",
     "test:server": "vitest run --project server -c vitest.config.mts",
     "test:nuxt": "vitest run --project nuxt -c vitest.nuxt.config.mts",
-    "test:components": "vitest run --project components app/components -c vitest.config.mts"
+    "test:components": "vitest run --project components app/components -c vitest.config.mts",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:e2e:headed": "playwright test --config playwright.config.ts --headed",
+    "test:e2e:ui": "playwright test --config playwright.config.ts --ui --ui-host 127.0.0.1 --headed"
   },
   "dependencies": {
     "@ieb/shared": "workspace:*",
@@ -21,9 +24,11 @@
     "firebase-admin": "^13.5.0",
     "h3": "1.15.11",
     "hls.js": "^1.6.13",
-    "nuxt": "^4.2.1"
+    "nuxt": "^4.2.1",
+    "vue": "^3.5.33"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@vitejs/plugin-vue": "^6.0.6",
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^25.6.0",
