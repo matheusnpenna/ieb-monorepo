@@ -32,7 +32,7 @@ const onLogout = async () => {
 <template>
   <div class="content-layout">
     <header class="page-shell content-header">
-      <BrandMark />
+      <BrandMark mode="icon" to="/home" />
       <div class="nav-group">
         <nav class="nav-links">
           <NuxtLink v-for="link in links" :key="link.to" :to="link.to">
