@@ -11,7 +11,7 @@ defineProps<{
 <template>
   <UiPanel tone="hero" padding="lg" class="featured-banner">
     <div class="section-stack">
-      <span class="pill">{{ badge }}</span>
+      <span class="pill w-fit">{{ badge }}</span>
       <h1 class="display-title">{{ title }}</h1>
       <p class="body-copy">{{ description }}</p>
       <div class="button-row">

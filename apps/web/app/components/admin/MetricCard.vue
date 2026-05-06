@@ -9,7 +9,7 @@ defineProps<{
 
 <template>
   <SurfaceCard>
-    <div class="section-stack">
+    <div class="section-stack metric-card">
       <span class="eyebrow">{{ label }}</span>
       <strong class="metric-value">{{ value }}</strong>
       <p class="body-copy">{{ detail }}</p>
@@ -19,7 +19,11 @@ defineProps<{
 
 <style scoped>
 .metric-value {
-  font-size: 2rem;
+  font-size: 1.5rem;
+}
+
+.metric-card {
+  gap: .1rem;
 }
 </style>
 

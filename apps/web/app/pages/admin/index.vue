@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AdminMetricCard from '../../components/admin/AdminMetricCard.vue'
+import MetricCard from '../../components/admin/MetricCard.vue'
 import PageIntro from '../../components/base/PageIntro.vue'
 
 definePageMeta({
@@ -26,7 +26,7 @@ const metrics = [
     />
 
     <section class="grid-cards">
-      <AdminMetricCard
+      <MetricCard
         v-for="metric in metrics"
         :key="metric.label"
         :label="metric.label"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppFooter from '../components/base/AppFooter.vue'
 import BrandMark from '../components/base/BrandMark.vue'
 
 const links = [
@@ -23,6 +24,8 @@ const links = [
     <main>
       <slot />
     </main>
+
+    <AppFooter brand-to="/" />
   </div>
 </template>
 

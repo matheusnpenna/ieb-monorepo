@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import CourseRail from '../components/content/CourseRail.vue'
+import PageIntro from '../components/base/PageIntro.vue'
 import FeaturedBanner from '../components/content/FeaturedBanner.vue'
-import AdminMetricCard from '../components/admin/AdminMetricCard.vue'
+import MetricCard from '../components/admin/MetricCard.vue'
+import CourseGrid from '../components/content/CourseGrid.vue'
 
 definePageMeta({
   layout: 'content'
@@ -20,39 +21,30 @@ const featuredSlides = [
   }
 ]
 
-const rails = [
+const courses = [
   {
-    title: 'Continuar assistindo',
-    description: 'Bloco reservado para retomar a ultima aula assistida.',
-    items: [
-      {
-        id: 'course-1',
-        title: 'Fundamentos da Videira',
-        description: 'Ultima aula acessada e progresso do aluno serao exibidos aqui.',
-        slug: 'fundamentos-da-videira',
-        meta: '72% concluido'
-      }
-    ]
+    id: 'course-1',
+    title: 'Fundamentos da Videira',
+    slug: 'fundamentos-da-videira',
+    shortDescription: 'Curso introdutorio com trilha principal e modulos sequenciais.',
+    coverImageUrl: null,
+    meta: '8 modulos'
   },
   {
-    title: 'Todos os cursos',
-    description: 'Carrosseis em grid para listar todos os cursos liberados ao aluno.',
-    items: [
-      {
-        id: 'course-1',
-        title: 'Fundamentos da Videira',
-        description: 'Curso introdutorio com trilha principal e modulos sequenciais.',
-        slug: 'fundamentos-da-videira',
-        meta: '8 modulos'
-      },
-      {
-        id: 'course-2',
-        title: 'Formacao Ministerial',
-        description: 'Curso placeholder para a vitrine da home.',
-        slug: 'formacao-ministerial',
-        meta: 'Em breve'
-      }
-    ]
+    id: 'course-2',
+    title: 'Formacao Ministerial',
+    slug: 'formacao-ministerial',
+    shortDescription: 'Curso placeholder para a vitrine da home.',
+    coverImageUrl: null,
+    meta: 'Em breve'
+  },
+  {
+    id: 'course-3',
+    title: 'Escola de Lideranca',
+    slug: 'escola-de-lideranca',
+    shortDescription: 'Percurso focado em acompanhamento, cultura de servico e maturidade ministerial.',
+    coverImageUrl: null,
+    meta: '12 encontros'
   }
 ]
 
@@ -73,7 +65,7 @@ const metrics = [
     />
 
     <section class="grid-cards">
-      <AdminMetricCard
+      <MetricCard
         v-for="metric in metrics"
         :key="metric.label"
         :label="metric.label"
@@ -82,13 +74,13 @@ const metrics = [
       />
     </section>
 
-    <CourseRail
-      v-for="rail in rails"
-      :key="rail.title"
-      :title="rail.title"
-      :description="rail.description"
-      :items="rail.items"
-    />
+    <section class="section-stack pt-4">
+      <PageIntro
+        eyebrow="Cursos"
+        title="Todos os cursos que você tem acesso"
+        description="Aqui estão todos os cursos que você tem acesso."
+      />
+      <CourseGrid :items="courses" />
+    </section>
   </div>
 </template>
-
