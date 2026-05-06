@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BrandMark from '../base/BrandMark.vue'
+import UiPanel from '../ui/UiPanel.vue';
 
 defineProps<{
   title: string

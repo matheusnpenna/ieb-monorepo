@@ -52,8 +52,10 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Nao apontar `shadcn-nuxt` para `app/components/ui`.
 - Nao assumir convencao de subpasta com `index.ts` ou `index.js` para esses componentes.
 - O registro desses componentes deve seguir o fluxo normal do Nuxt para componentes Vue.
-- Mesmo com auto-import do Nuxt, seguir a regra documentada no design system:
-  - importar explicitamente em `<script setup>` os componentes de `app/components/ui`, `app/components/base` e shells compartilhados usados na pagina.
+- Mesmo com auto-import do Nuxt, nao assumir que componentes customizados serao resolvidos automaticamente.
+- Sempre importar explicitamente em `<script setup>` qualquer componente customizado utilizado, incluindo componentes de `app/components/ui`, `app/components/base`, shells compartilhados e outros componentes locais do projeto.
+- Esta regra vale mesmo quando o componente ja parecer funcionar por auto-import.
+- Componentes nativos do Nuxt, como `NuxtLink`, `NuxtPage`, `NuxtLayout` e similares, nao precisam de import explicito.
 
 ## Design system
 
