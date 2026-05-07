@@ -37,6 +37,8 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - O app Nuxt vive em `apps/web`.
 - O projeto roda como SPA no momento: `ssr: false`.
 - Se componentes, composables ou testes do app importarem diretamente de `vue`, o pacote `vue` deve permanecer declarado explicitamente em `apps/web/package.json`.
+- Preferir organizar endpoints do servidor por contexto em pastas dedicadas dentro de `apps/web/server/api`.
+- Sempre que possivel, usar estrutura como `api/courses/index.get.ts`, `api/courses/[id].get.ts`, `api/auth/login.post.ts` e similares, evitando concentrar muitos endpoints soltos diretamente em `api/`.
 - Segredos e variaveis de ambiente devem ficar em `runtimeConfig`.
 - Valores publicos devem ficar em `runtimeConfig.public`.
 - Ao usar variaveis de ambiente para sobrescrever `runtimeConfig`, seguir a nomenclatura do Nuxt para chaves aninhadas.
@@ -80,6 +82,11 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Nunca expor credenciais privadas do Firebase em codigo cliente, logs ou respostas HTTP.
 - Em operacoes de exclusao, preservar a estrategia de soft delete do projeto.
 - Acoes administrativas relevantes devem continuar registrando rastreabilidade.
+- Para endpoints que nao sejam relacionados a autenticacao, usar como padrao de resposta:
+  - sucesso: `{ status: 'success', message?: string, data: T }`
+  - erro: `{ status: 'error', messages: string[], data: T }`
+- Em respostas de erro, manter tambem o status HTTP correto e preencher `messages` com a mensagem retornada ao cliente.
+- Endpoints de autenticacao sao excecao e podem manter o contrato proprio ja adotado no projeto.
 
 ## Regra critica sobre h3
 
@@ -98,6 +105,8 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Antes de criar tipos novos, verificar `packages/shared/src`.
 - Se um ajuste afeta dominio, auth, Firestore ou payloads de API, atualizar os tipos compartilhados junto com o consumo.
 - Evitar duplicar interfaces entre `apps/web` e `packages/shared`.
+- Cada curso deve ter `slug` unico.
+- O `slug` do curso deve ser usado como `id` do documento na collection de cursos do Firestore para otimizar acesso direto via `doc(id)`.
 
 ## Estrutura de testes
 
@@ -124,6 +133,8 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Fluxos e2e que dependem de autenticacao externa ou Firebase devem preferir `page.route(...)` para mockar as respostas HTTP quando o objetivo do teste for validar o comportamento do frontend e da navegacao.
 - Nao criar testes de componente Vue dentro de `apps/web/tests/server`.
 - Nao criar uma pasta centralizada para testes de componentes quando o teste puder ficar ao lado do proprio `.vue`.
+- Para testes dentro de `apps/web/tests/server/api`, nao repetir `endpoint`, `endpoints` ou termos equivalentes no nome do arquivo.
+- Nestes casos, o escopo do teste ja deve ser indicado pela propria pasta `api`, usando nomes como `courses.spec.ts`, `course-detail.spec.ts` e similares.
 
 ## Validacao minima
 
