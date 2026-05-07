@@ -1,15 +1,18 @@
-import type { AdminUploadedImageResponse } from '@ieb/shared'
+import type { AdminUploadedImageResponse, AuthSessionContext } from '@ieb/shared'
 import { createError, defineEventHandler, readMultipartFormData, setResponseStatus } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession, writeAdminLog } from '../../../../utils/auth'
 import { uploadAdminCourseImage } from '../../../../utils/admin-assets'
 
 export default defineEventHandler(async (event): Promise<AdminUploadedImageResponse> => {
+  let session: AuthSessionContext | null = null
+  let fieldValue = ''
+
   try {
-    const session = await requireAuthSession(event, { admin: true })
+    session = await requireAuthSession(event, { admin: true })
     const multipartParts = await readMultipartFormData(event)
     const fieldPart = multipartParts?.find((part) => part.name === 'field')
     const filePart = multipartParts?.find((part) => part.name === 'file')
-    const fieldValue = fieldPart?.data ? Buffer.from(fieldPart.data).toString('utf-8').trim() : ''
+    fieldValue = fieldPart?.data ? Buffer.from(fieldPart.data).toString('utf-8').trim() : ''
 
     if (!filePart?.filename || !filePart.type || !filePart.data) {
       throw createError({
@@ -49,6 +52,24 @@ export default defineEventHandler(async (event): Promise<AdminUploadedImageRespo
       error.statusMessage
         ? error.statusMessage
         : 'Nao foi possivel enviar a imagem.'
+
+    if (session) {
+      try {
+        await writeAdminLog(session, {
+          action: 'update',
+          targetCollection: 'courses',
+          targetId: fieldValue || 'image-upload',
+          summary: 'Falha ao enviar imagem administrativa para curso.',
+          metadata: {
+            field: fieldValue || null,
+            statusCode,
+            statusMessage
+          }
+        })
+      } catch {
+        // Preserve the original upload error even if admin log persistence fails.
+      }
+    }
 
     setResponseStatus(event, statusCode)
 

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requireAuthSession, uploadAdminCourseImage, readMultipartFormData } = vi.hoisted(() => ({
+const { requireAuthSession, uploadAdminCourseImage, readMultipartFormData, writeAdminLog } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
   uploadAdminCourseImage: vi.fn(),
-  readMultipartFormData: vi.fn()
+  readMultipartFormData: vi.fn(),
+  writeAdminLog: vi.fn()
 }))
 
 vi.hoisted(() => {
@@ -21,7 +22,8 @@ vi.mock('h3', async () => {
 })
 
 vi.mock('../../../server/utils/auth', () => ({
-  requireAuthSession
+  requireAuthSession,
+  writeAdminLog
 }))
 
 vi.mock('../../../server/utils/admin-assets', () => ({
@@ -104,6 +106,14 @@ describe('POST /api/admin/uploads/images', () => {
     const response = await uploadImageHandler(event)
 
     expect(event.node.res.statusCode).toBe(400)
+    expect(writeAdminLog).toHaveBeenCalledWith(
+      sampleSession,
+      expect.objectContaining({
+        action: 'update',
+        targetCollection: 'courses',
+        summary: 'Falha ao enviar imagem administrativa para curso.'
+      })
+    )
     expect(response).toEqual({
       status: 'error',
       messages: ['Selecione uma imagem valida para envio.'],
