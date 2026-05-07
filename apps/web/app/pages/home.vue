@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import FeaturedBanner from '../components/content/FeaturedBanner.vue'
-import MetricCard from '../components/admin/MetricCard.vue'
+import HomeMetricsOverview from '../components/content/HomeMetricsOverview.vue'
 import MyCoursesGrid from '../components/content/MyCoursesGrid.vue'
 
 definePageMeta({
@@ -14,15 +14,10 @@ useSeoMeta({
 const featuredSlides = [
   {
     id: 'slide-1',
-    title: 'Novos cursos para lideranca e discipulado',
+    title: 'Nossos cursos para discipulado e liderança',
     description: 'Espaco reservado para noticias, lancamentos e avisos da plataforma.',
     badge: 'Destaques'
   }
-]
-
-const metrics = [
-  { label: 'Continuar assistindo', value: 'Aula 04', detail: 'Retomar o ultimo video assistido.' },
-  { label: 'Cursos concluidos', value: '03', detail: 'Resumo de certificados liberados.' }
 ]
 </script>
 
@@ -36,15 +31,7 @@ const metrics = [
       :description="slide.description"
     />
 
-    <section class="grid-cards">
-      <MetricCard
-        v-for="metric in metrics"
-        :key="metric.label"
-        :label="metric.label"
-        :value="metric.value"
-        :detail="metric.detail"
-      />
-    </section>
+    <HomeMetricsOverview />
 
     <MyCoursesGrid />
   </div>

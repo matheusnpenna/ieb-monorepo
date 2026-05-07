@@ -13,6 +13,7 @@ import {
   getAccessibleCourseDetailBySlug,
   getAccessibleModuleDetailBySlugs,
   getAccessibleLessonDetailBySlugs,
+  getHomeMetrics,
   listAccessibleCourses,
   listLessonCommentsBySlugs,
   markLessonAsCompletedBySlugs,
@@ -324,6 +325,163 @@ describe('listAccessibleCourses', () => {
 
     expect(courses.map((course) => course.id)).toEqual(['course-1', 'course-2'])
     expect(coursesCollection.get).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('getHomeMetrics', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns continue watching data and completed courses count for the authenticated student', async () => {
+    const courseOne = buildCourse({
+      id: 'curso-de-teologia-basica',
+      title: 'Curso de Teologia Basica',
+      slug: 'curso-de-teologia-basica',
+      moduleIds: ['modulo-01']
+    })
+    const courseTwo = buildCourse({
+      id: 'curso-de-lideranca',
+      title: 'Curso de Lideranca',
+      slug: 'curso-de-lideranca',
+      moduleIds: ['modulo-02']
+    })
+    const moduleOne = buildModule({
+      id: 'modulo-01',
+      courseId: courseOne.id,
+      title: 'Modulo 01',
+      slug: 'fundamentos',
+      lessonIds: ['aula-01']
+    })
+    const moduleTwo = buildModule({
+      id: 'modulo-02',
+      courseId: courseTwo.id,
+      title: 'Modulo 02',
+      slug: 'pratica',
+      lessonIds: ['aula-02']
+    })
+    const lessonOne = buildLesson({
+      id: 'aula-01',
+      courseId: courseOne.id,
+      moduleId: moduleOne.id,
+      title: 'Aula 01',
+      slug: 'introducao'
+    })
+    const lessonTwo = buildLesson({
+      id: 'aula-02',
+      courseId: courseTwo.id,
+      moduleId: moduleTwo.id,
+      title: 'Aula 02',
+      slug: 'liderando-equipes'
+    })
+
+    const coursesCollection = {
+      doc: vi.fn((courseId: string) => ({
+        get: vi.fn().mockResolvedValue(
+          createDocumentSnapshot(courseId === courseOne.id ? courseOne : courseTwo)
+        )
+      }))
+    }
+    const enrollmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            { data: () => buildEnrollment({ id: 'enrollment-1', userId: 'student-1', courseId: courseOne.id, status: 'active' }) },
+            {
+              data: () =>
+                buildEnrollment({
+                  id: 'enrollment-2',
+                  userId: 'student-1',
+                  courseId: courseTwo.id,
+                  status: 'completed',
+                  completedAt: '2026-05-01T00:00:00.000Z'
+                })
+            }
+          ]
+        })
+      })
+    }
+    const modulesCollection = {
+      where: vi.fn((field: string, operator: string, courseId: string) => ({
+        get: vi.fn().mockResolvedValue({
+          docs: [createDocumentSnapshot(courseId === courseOne.id ? moduleOne : moduleTwo)]
+        })
+      }))
+    }
+    const lessonsCollection = {
+      where: vi.fn((field: string, operator: string, courseId: string) => ({
+        get: vi.fn().mockResolvedValue({
+          docs: [createDocumentSnapshot(courseId === courseOne.id ? lessonOne : lessonTwo)]
+        })
+      }))
+    }
+    const lessonProgressCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            createDocumentSnapshot(
+              buildLessonProgress({
+                id: 'lesson-progress-1',
+                userId: 'student-1',
+                courseId: courseOne.id,
+                moduleId: moduleOne.id,
+                lessonId: lessonOne.id,
+                watchedMinutes: 3,
+                lastPositionInSeconds: 180,
+                completionRate: 20,
+                updatedAt: '2026-05-06T10:00:00.000Z'
+              })
+            ),
+            createDocumentSnapshot(
+              buildLessonProgress({
+                id: 'lesson-progress-2',
+                userId: 'student-1',
+                courseId: courseTwo.id,
+                moduleId: moduleTwo.id,
+                lessonId: lessonTwo.id,
+                watchedMinutes: 8,
+                lastPositionInSeconds: 420,
+                completionRate: 55,
+                updatedAt: '2026-05-07T12:00:00.000Z'
+              })
+            )
+          ]
+        })
+      })
+    }
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') return coursesCollection
+      if (collectionName === 'enrollments') return enrollmentsCollection
+      if (collectionName === 'modules') return modulesCollection
+      if (collectionName === 'lessons') return lessonsCollection
+      if (collectionName === 'lessonProgress') return lessonProgressCollection
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const metrics = await getHomeMetrics({
+      user: {
+        id: 'student-1',
+        email: 'student@example.com',
+        fullName: 'Student One',
+        role: 'student',
+        status: 'active',
+        region: 'feira-de-santana',
+        avatarUrl: null
+      },
+      issuedAt: '2026-05-07T00:00:00.000Z'
+    })
+
+    expect(metrics).toEqual({
+      continueWatching: {
+        lessonTitle: 'Aula 02',
+        courseTitle: 'Curso de Lideranca',
+        href: '/curso/curso-de-lideranca/modulo/pratica/aula/liderando-equipes'
+      },
+      completedCourses: {
+        count: 1
+      }
+    })
   })
 })
 

@@ -4,6 +4,7 @@ import type {
   Course,
   CourseEnrollment,
   CourseModule,
+  HomeMetricsData,
   Lesson,
   LessonComment,
   LessonProgress,
@@ -115,6 +116,12 @@ const getActiveEnrollmentForCourse = async (userId: string, courseId: string) =>
       .map((document) => document.data() as CourseEnrollment)
       .find((enrollment) => enrollment.courseId === courseId && isActiveEnrollment(enrollment)) || null
   )
+}
+
+const listUserEnrollments = async (userId: string) => {
+  const enrollmentSnapshot = await getFirebaseAdminCollection('enrollments').where('userId', '==', userId).get()
+
+  return enrollmentSnapshot.docs.map((document) => document.data() as CourseEnrollment)
 }
 
 const listCourseModules = async (course: Course) => {
@@ -428,10 +435,8 @@ const mapLessonCommentItem = (
 }
 
 const listStudentCourses = async (userId: string) => {
-  const enrollmentSnapshot = await getFirebaseAdminCollection('enrollments').where('userId', '==', userId).get()
   const courseIds = [...new Set(
-    enrollmentSnapshot.docs
-      .map((document) => document.data() as CourseEnrollment)
+    (await listUserEnrollments(userId))
       .filter(isActiveEnrollment)
       .map((enrollment) => enrollment.courseId)
       .filter(Boolean)
@@ -452,6 +457,79 @@ export const listAccessibleCourses = async (session: AuthSessionContext) => {
   }
 
   return await listStudentCourses(session.user.id)
+}
+
+export const getHomeMetrics = async (session: AuthSessionContext): Promise<HomeMetricsData> => {
+  const accessibleCourses = await listAccessibleCourses(session)
+  const accessibleCourseIds = new Set(accessibleCourses.map((course) => course.id))
+
+  const [enrollments, lessonProgressList, courseStructures] = await Promise.all([
+    listUserEnrollments(session.user.id),
+    getFirebaseAdminCollection('lessonProgress')
+      .where('userId', '==', session.user.id)
+      .get()
+      .then((snapshot) => snapshot.docs.map(toLessonProgressDocument)),
+    Promise.all(
+      accessibleCourses.map(async (course) => {
+        const [modules, lessons] = await Promise.all([listCourseModules(course), listCourseLessons(course)])
+
+        return {
+          course,
+          modules,
+          lessons
+        }
+      })
+    )
+  ])
+
+  const courseById = new Map(courseStructures.map((item) => [item.course.id, item.course]))
+  const moduleById = new Map(courseStructures.flatMap((item) => item.modules.map((module) => [module.id, module] as const)))
+  const lessonById = new Map(courseStructures.flatMap((item) => item.lessons.map((lesson) => [lesson.id, lesson] as const)))
+
+  const latestStartedLessonProgress = lessonProgressList
+    .filter((lessonProgress) => accessibleCourseIds.has(lessonProgress.courseId) && hasLessonProgressStarted(lessonProgress))
+    .sort((left, right) => toTimestampNumber(right.updatedAt) - toTimestampNumber(left.updatedAt))
+    .find((lessonProgress) => {
+      const course = courseById.get(lessonProgress.courseId)
+      const module = moduleById.get(lessonProgress.moduleId)
+      const lesson = lessonById.get(lessonProgress.lessonId)
+
+      return Boolean(course && module && lesson && module.courseId === course.id && lesson.moduleId === module.id)
+    })
+
+  const continueWatching = latestStartedLessonProgress
+    ? (() => {
+        const course = courseById.get(latestStartedLessonProgress.courseId)!
+        const module = moduleById.get(latestStartedLessonProgress.moduleId)!
+        const lesson = lessonById.get(latestStartedLessonProgress.lessonId)!
+
+        return {
+          lessonTitle: lesson.title,
+          courseTitle: course.title,
+          href: buildLessonNavigationHref(course.slug, module.slug, lesson.slug)
+        }
+      })()
+    : {
+        lessonTitle: null,
+        courseTitle: null,
+        href: null
+      }
+
+  const completedCoursesCount = new Set(
+    enrollments
+      .filter(
+        (enrollment) =>
+          !enrollment.deletedAt && enrollment.status === 'completed' && accessibleCourseIds.has(enrollment.courseId)
+      )
+      .map((enrollment) => enrollment.courseId)
+  ).size
+
+  return {
+    continueWatching,
+    completedCourses: {
+      count: completedCoursesCount
+    }
+  }
 }
 
 export const getAccessibleCourseDetailBySlug = async (session: AuthSessionContext, courseSlug: string) => {

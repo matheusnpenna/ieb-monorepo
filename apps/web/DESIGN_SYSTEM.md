@@ -46,6 +46,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
 - `UiConfirmationModal`: modal global de confirmacao para acoes sensiveis.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
+- `HomeMetricsOverview`: resumo da jornada do aluno na home com metricas de continuidade e cursos concluidos.
 - `LessonVideoPlayer`: player reutilizavel para aulas em video com suporte a HLS.
 - `AppFooter`, `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 

@@ -15,8 +15,10 @@ defineProps<{
       <h1 class="display-title">{{ title }}</h1>
       <p class="body-copy">{{ description }}</p>
       <div class="button-row">
-        <UiButton to="/home" size="lg">Entrar na plataforma</UiButton>
-        <UiButton to="/login" variant="secondary" size="lg">Acessar conta</UiButton>
+        <UiButton to="https://www.instagram.com/comunidadevideira/" target="_blank" size="lg">Instagram</UiButton>
+        <UiButton to="https://www.youtube.com/@VideiraTV" target="_blank" variant="secondary" size="lg">Youtube</UiButton>
+        <UiButton to="https://www.youtube.com/@VideiraTV/podcasts" target="_blank" variant="secondary" size="lg">Podcasts</UiButton>
+        <UiButton to="https://www.youtube.com/@VideiraTV/streams" target="_blank" variant="secondary" size="lg">Macros e Celebrações</UiButton>
       </div>
     </div>
   </UiPanel>

@@ -9,6 +9,7 @@ const props = withDefaults(
   defineProps<{
     to?: string
     href?: string
+    target?: string
     type?: 'button' | 'submit' | 'reset'
     variant?: 'primary' | 'secondary' | 'ghost' | 'success'
     size?: 'sm' | 'md' | 'lg'
@@ -75,6 +76,7 @@ const sizeClass = computed(() => {
     v-bind="attrs"
     :to="to"
     :href="href"
+    :target="target"
     :type="componentTag === 'button' ? type : undefined"
     :tabindex="isDisabled && componentTag !== 'button' ? -1 : undefined"
     :aria-disabled="isDisabled ? 'true' : undefined"

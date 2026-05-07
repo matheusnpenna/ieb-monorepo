@@ -16,6 +16,23 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse<T>
 
 export type CourseListResponse = ApiResponse<Course[]>
 
+export interface HomeMetricsContinueWatching {
+  lessonTitle: string | null
+  courseTitle: string | null
+  href: string | null
+}
+
+export interface HomeMetricsCompletedCourses {
+  count: number
+}
+
+export interface HomeMetricsData {
+  continueWatching: HomeMetricsContinueWatching
+  completedCourses: HomeMetricsCompletedCourses
+}
+
+export type HomeMetricsResponse = ApiResponse<HomeMetricsData | null>
+
 export interface CourseDetailActionLinks {
   startCourseHref: string | null
   continueWatchingHref: string | null
