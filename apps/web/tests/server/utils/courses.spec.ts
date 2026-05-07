@@ -1,22 +1,29 @@
 import type { Assessment, Course, CourseEnrollment, CourseModule, Lesson, LessonComment, LessonProgress } from '@ieb/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getFirebaseAdminCollection } = vi.hoisted(() => ({
-  getFirebaseAdminCollection: vi.fn()
+const { getFirebaseAdminCollection, getFirebaseAdminFirestore } = vi.hoisted(() => ({
+  getFirebaseAdminCollection: vi.fn(),
+  getFirebaseAdminFirestore: vi.fn(() => ({}))
 }))
 
 vi.mock('../../../server/utils/firebase-admin', () => ({
-  getFirebaseAdminCollection
+  getFirebaseAdminCollection,
+  getFirebaseAdminFirestore
 }))
 
 import {
+  createAdminCourse,
+  deleteAdminCourseBySlug,
   getAccessibleCourseDetailBySlug,
   getAccessibleModuleDetailBySlugs,
   getAccessibleLessonDetailBySlugs,
+  getAdminCourseBySlug,
   getHomeMetrics,
   listAccessibleCourses,
+  listAdminCoursesForManagement,
   listLessonCommentsBySlugs,
   markLessonAsCompletedBySlugs,
+  updateAdminCourseBySlug,
   updateLessonProgressBySlugs,
   createLessonCommentBySlugs,
   updateLessonCommentBySlugs,
@@ -325,6 +332,159 @@ describe('listAccessibleCourses', () => {
 
     expect(courses.map((course) => course.id)).toEqual(['course-1', 'course-2'])
     expect(coursesCollection.get).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('admin course management', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const adminSession = {
+    user: {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      fullName: 'Admin User',
+      role: 'admin' as const,
+      status: 'active' as const,
+      region: 'feira-de-santana' as const,
+      avatarUrl: null
+    },
+    issuedAt: '2026-05-07T00:00:00.000Z'
+  }
+
+  it('lists admin courses for management', async () => {
+    const courseOne = buildCourse({
+      id: 'curso-a',
+      title: 'Curso A',
+      slug: 'curso-a'
+    })
+    const courseTwo = buildCourse({
+      id: 'curso-b',
+      title: 'Curso B',
+      slug: 'curso-b'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [createDocumentSnapshot(courseTwo), createDocumentSnapshot(courseOne)]
+          })
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const courses = await listAdminCoursesForManagement(adminSession)
+
+    expect(courses.map((course) => course.slug)).toEqual(['curso-a', 'curso-b'])
+  })
+
+  it('creates, updates, loads and soft deletes a course while writing admin logs', async () => {
+    const adminLogSet = vi.fn().mockResolvedValue(undefined)
+    const courseSet = vi.fn().mockResolvedValue(undefined)
+    const storedCourses = new Map<string, Course>()
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedCourses.has(documentId)
+                ? createDocumentSnapshot(storedCourses.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>) => {
+              const existingCourse = documentId ? storedCourses.get(documentId) : undefined
+              const nextCourse = {
+                ...(existingCourse || {}),
+                ...(payload as Course),
+                id: documentId
+              } as Course
+
+              if (documentId) {
+                storedCourses.set(documentId, nextCourse)
+              }
+
+              return await courseSet(payload)
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'adminLogs') {
+        return {
+          doc: vi.fn(() => ({
+            id: 'log-1',
+            set: adminLogSet
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const createdCourse = await createAdminCourse(adminSession, {
+      title: 'Curso de Lideranca',
+      slug: 'curso-de-lideranca',
+      shortDescription: 'Descricao curta',
+      description: 'Descricao completa do curso',
+      visibility: 'draft',
+      coverImageUrl: '',
+      heroImageUrl: null,
+      totalDurationInMinutes: 180,
+      requiredCompletionRate: 80,
+      certificateEnabled: true
+    })
+
+    expect(createdCourse.slug).toBe('curso-de-lideranca')
+    expect(createdCourse.createdBy).toBe('admin-1')
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'create',
+        targetCollection: 'courses',
+        targetId: 'curso-de-lideranca'
+      })
+    )
+
+    const loadedCourse = await getAdminCourseBySlug(adminSession, 'curso-de-lideranca')
+    expect(loadedCourse.title).toBe('Curso de Lideranca')
+
+    const updatedCourse = await updateAdminCourseBySlug(adminSession, 'curso-de-lideranca', {
+      title: 'Curso de Lideranca Atualizado',
+      slug: 'curso-de-lideranca',
+      shortDescription: 'Descricao curta atualizada',
+      description: 'Descricao completa atualizada',
+      visibility: 'published',
+      coverImageUrl: 'https://example.com/capa.png',
+      heroImageUrl: 'https://example.com/hero.png',
+      totalDurationInMinutes: 240,
+      requiredCompletionRate: 90,
+      certificateEnabled: false
+    })
+
+    expect(updatedCourse.title).toBe('Curso de Lideranca Atualizado')
+    expect(updatedCourse.visibility).toBe('published')
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'update',
+        targetCollection: 'courses',
+        targetId: 'curso-de-lideranca'
+      })
+    )
+
+    const deletedCourse = await deleteAdminCourseBySlug(adminSession, 'curso-de-lideranca')
+
+    expect(deletedCourse.deletedAt).toBeTruthy()
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'delete',
+        targetCollection: 'courses',
+        targetId: 'curso-de-lideranca'
+      })
+    )
   })
 })
 

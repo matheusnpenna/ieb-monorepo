@@ -1,4 +1,4 @@
-import type { Assessment, Course, CourseModule, Lesson } from './database'
+import type { Assessment, Course, CourseModule, CourseVisibility, Lesson } from './database'
 
 export interface ApiSuccessResponse<T> {
   status: 'success'
@@ -32,6 +32,22 @@ export interface HomeMetricsData {
 }
 
 export type HomeMetricsResponse = ApiResponse<HomeMetricsData | null>
+
+export interface AdminCourseInput {
+  title: string
+  slug: string
+  shortDescription: string
+  description: string
+  visibility: CourseVisibility
+  coverImageUrl: string | null
+  heroImageUrl: string | null
+  totalDurationInMinutes: number
+  requiredCompletionRate: number
+  certificateEnabled: boolean
+}
+
+export type AdminCoursesResponse = ApiResponse<Course[]>
+export type AdminCourseResponse = ApiResponse<Course | null>
 
 export interface CourseDetailActionLinks {
   startCourseHref: string | null

@@ -1,4 +1,5 @@
 import type {
+  AdminCourseInput,
   Assessment,
   AuthSessionContext,
   Course,
@@ -14,6 +15,7 @@ import type {
   ModuleDetailLesson
 } from '@ieb/shared'
 import { createError } from 'h3'
+import { writeAdminLog } from './auth'
 import { getFirebaseAdminCollection } from './firebase-admin'
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
@@ -58,6 +60,8 @@ const createHttpError = (statusCode: number, statusMessage: string) =>
     statusMessage
   })
 
+const COURSE_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
 const isActiveEnrollment = (enrollment: CourseEnrollment) =>
   !enrollment.deletedAt && (enrollment.status === 'active' || enrollment.status === 'completed')
 
@@ -69,6 +73,21 @@ const sortCoursesByTitle = (courses: Course[]) =>
   [...courses].sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'))
 
 const toTimestamp = () => new Date().toISOString()
+const normalizeOptionalText = (value: string | null | undefined) => {
+  const normalizedValue = typeof value === 'string' ? value.trim() : ''
+
+  return normalizedValue ? normalizedValue : null
+}
+
+const normalizeCourseSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
 
 const toTimestampNumber = (timestamp: string | null | undefined) => {
   if (!timestamp) {
@@ -106,6 +125,77 @@ const getCourseById = async (courseId: string) => {
   }
 
   return toCourseDocument(snapshot)
+}
+
+const assertAdminCoursePayload = (input: AdminCourseInput, currentCourseSlug?: string) => {
+  const normalizedSlug = normalizeCourseSlug(input.slug)
+  const normalizedCurrentCourseSlug = currentCourseSlug ? normalizeCourseSlug(currentCourseSlug) : null
+
+  if (!input.title.trim()) {
+    throw createHttpError(400, 'Informe o titulo do curso.')
+  }
+
+  if (!normalizedSlug || !COURSE_SLUG_REGEX.test(normalizedSlug)) {
+    throw createHttpError(400, 'Informe um slug de curso valido.')
+  }
+
+  if (normalizedCurrentCourseSlug && normalizedSlug !== normalizedCurrentCourseSlug) {
+    throw createHttpError(400, 'O slug do curso nao pode ser alterado apos a criacao.')
+  }
+
+  if (!input.shortDescription.trim()) {
+    throw createHttpError(400, 'Informe a descricao curta do curso.')
+  }
+
+  if (!input.description.trim()) {
+    throw createHttpError(400, 'Informe a descricao completa do curso.')
+  }
+
+  if (!['draft', 'published', 'archived'].includes(input.visibility)) {
+    throw createHttpError(400, 'Informe uma visibilidade de curso valida.')
+  }
+
+  if (!Number.isFinite(input.totalDurationInMinutes) || input.totalDurationInMinutes < 0) {
+    throw createHttpError(400, 'Informe uma duracao total valida para o curso.')
+  }
+
+  if (!Number.isFinite(input.requiredCompletionRate) || input.requiredCompletionRate < 0 || input.requiredCompletionRate > 100) {
+    throw createHttpError(400, 'Informe um progresso minimo entre 0 e 100.')
+  }
+
+  return normalizedSlug
+}
+
+const buildAdminCoursePayload = (
+  input: AdminCourseInput,
+  actorUserId: string,
+  options?: { existingCourse?: Course | null }
+): Course => {
+  const existingCourse = options?.existingCourse || null
+  const now = toTimestamp()
+  const normalizedSlug = assertAdminCoursePayload(input, existingCourse?.slug)
+
+  return {
+    id: normalizedSlug,
+    title: input.title.trim(),
+    slug: normalizedSlug,
+    shortDescription: input.shortDescription.trim(),
+    description: input.description.trim(),
+    visibility: input.visibility,
+    coverImageUrl: normalizeOptionalText(input.coverImageUrl),
+    heroImageUrl: normalizeOptionalText(input.heroImageUrl),
+    totalDurationInMinutes: Math.max(0, Math.floor(input.totalDurationInMinutes)),
+    moduleIds: existingCourse?.moduleIds || [],
+    highlightIds: existingCourse?.highlightIds || [],
+    requiredCompletionRate: Math.min(100, Math.max(0, Math.floor(input.requiredCompletionRate))),
+    certificateEnabled: Boolean(input.certificateEnabled),
+    createdAt: existingCourse?.createdAt || now,
+    updatedAt: now,
+    deletedAt: existingCourse?.deletedAt ?? null,
+    createdBy: existingCourse?.createdBy || actorUserId,
+    updatedBy: actorUserId,
+    deletedBy: existingCourse?.deletedBy ?? null
+  }
 }
 
 const getActiveEnrollmentForCourse = async (userId: string, courseId: string) => {
@@ -457,6 +547,114 @@ export const listAccessibleCourses = async (session: AuthSessionContext) => {
   }
 
   return await listStudentCourses(session.user.id)
+}
+
+export const listAdminCoursesForManagement = async (session: AuthSessionContext) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  return await listAdminCourses()
+}
+
+export const getAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const normalizedSlug = normalizeCourseSlug(courseSlug)
+
+  if (!normalizedSlug) {
+    throw createHttpError(400, 'Informe um slug de curso valido.')
+  }
+
+  const course = await getCourseById(normalizedSlug)
+
+  if (!course || course.deletedAt) {
+    throw createHttpError(404, 'Curso nao encontrado.')
+  }
+
+  return course
+}
+
+export const createAdminCourse = async (session: AuthSessionContext, input: AdminCourseInput) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const coursePayload = buildAdminCoursePayload(input, session.user.id)
+  const existingCourse = await getCourseById(coursePayload.slug)
+
+  if (existingCourse) {
+    throw createHttpError(409, 'Ja existe um curso com este slug.')
+  }
+
+  await getFirebaseAdminCollection('courses').doc(coursePayload.slug).set(coursePayload)
+  await writeAdminLog(session, {
+    action: 'create',
+    targetCollection: 'courses',
+    targetId: coursePayload.id,
+    summary: `Curso ${coursePayload.title} criado no painel administrativo.`,
+    metadata: {
+      slug: coursePayload.slug,
+      visibility: coursePayload.visibility
+    }
+  })
+
+  return coursePayload
+}
+
+export const updateAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string, input: AdminCourseInput) => {
+  const existingCourse = await getAdminCourseBySlug(session, courseSlug)
+  const coursePayload = buildAdminCoursePayload(input, session.user.id, { existingCourse })
+
+  await getFirebaseAdminCollection('courses').doc(existingCourse.id).set(coursePayload, { merge: true })
+  await writeAdminLog(session, {
+    action: 'update',
+    targetCollection: 'courses',
+    targetId: existingCourse.id,
+    summary: `Curso ${coursePayload.title} atualizado no painel administrativo.`,
+    metadata: {
+      slug: coursePayload.slug,
+      visibility: coursePayload.visibility
+    }
+  })
+
+  return coursePayload
+}
+
+export const deleteAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string) => {
+  const existingCourse = await getAdminCourseBySlug(session, courseSlug)
+  const now = toTimestamp()
+
+  const deletedCourse = {
+    ...existingCourse,
+    updatedAt: now,
+    deletedAt: now,
+    updatedBy: session.user.id,
+    deletedBy: session.user.id
+  }
+
+  await getFirebaseAdminCollection('courses').doc(existingCourse.id).set(
+    {
+      updatedAt: deletedCourse.updatedAt,
+      deletedAt: deletedCourse.deletedAt,
+      updatedBy: deletedCourse.updatedBy,
+      deletedBy: deletedCourse.deletedBy
+    },
+    { merge: true }
+  )
+  await writeAdminLog(session, {
+    action: 'delete',
+    targetCollection: 'courses',
+    targetId: existingCourse.id,
+    summary: `Curso ${existingCourse.title} removido no painel administrativo.`,
+    metadata: {
+      slug: existingCourse.slug
+    }
+  })
+
+  return deletedCourse
 }
 
 export const getHomeMetrics = async (session: AuthSessionContext): Promise<HomeMetricsData> => {
