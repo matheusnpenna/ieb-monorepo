@@ -1,4 +1,4 @@
-import type { AuthSessionContext, Course, CourseEnrollment, CourseModule, Lesson, LessonProgress } from '@ieb/shared'
+import type { Assessment, AuthSessionContext, Course, CourseEnrollment, CourseModule, Lesson, LessonProgress } from '@ieb/shared'
 import { createError } from 'h3'
 import { getFirebaseAdminCollection } from './firebase-admin'
 
@@ -25,6 +25,12 @@ const toLessonProgressDocument = (snapshot: { id: string; data: () => unknown })
     id: snapshot.id,
     ...(snapshot.data() as Omit<LessonProgress, 'id'>)
   }) as LessonProgress
+
+const toAssessmentDocument = (snapshot: { id: string; data: () => unknown }) =>
+  ({
+    id: snapshot.id,
+    ...(snapshot.data() as Omit<Assessment, 'id'>)
+  }) as Assessment
 
 const createHttpError = (statusCode: number, statusMessage: string) =>
   createError({
@@ -59,6 +65,10 @@ const hasLessonProgressStarted = (lessonProgress: LessonProgress) =>
     lessonProgress.completionRate > 0 ||
     lessonProgress.markedAsCompleted ||
     Boolean(lessonProgress.completedAt))
+
+const isLessonProgressCompleted = (lessonProgress: LessonProgress) =>
+  !lessonProgress.deletedAt &&
+  (lessonProgress.markedAsCompleted || Boolean(lessonProgress.completedAt) || lessonProgress.completionRate >= 100)
 
 const listAdminCourses = async () => {
   const snapshot = await getFirebaseAdminCollection('courses').get()
@@ -120,6 +130,49 @@ const listCourseLessons = async (course: Course) => {
   return lessonSnapshot.docs.map(toLessonDocument).filter((lesson) => !lesson.deletedAt)
 }
 
+const listModuleLessons = (module: CourseModule, lessons: Lesson[]) =>
+  sortModuleLessons(
+    module,
+    lessons.filter((lesson) => lesson.moduleId === module.id)
+  )
+
+const listModuleAssessments = async (module: CourseModule) => {
+  if (module.assessmentIds.length === 0) {
+    return []
+  }
+
+  const assessmentSnapshot = await getFirebaseAdminCollection('assessments').where('moduleId', '==', module.id).get()
+  const assessments = assessmentSnapshot.docs.map(toAssessmentDocument).filter((assessment) => !assessment.deletedAt)
+  const assessmentOrderIndex = new Map(module.assessmentIds.map((assessmentId, index) => [assessmentId, index]))
+
+  return [...assessments].sort((left, right) => {
+    const leftIndex = assessmentOrderIndex.get(left.id)
+    const rightIndex = assessmentOrderIndex.get(right.id)
+
+    if (typeof leftIndex === 'number' && typeof rightIndex === 'number') {
+      return leftIndex - rightIndex
+    }
+
+    if (typeof leftIndex === 'number') {
+      return -1
+    }
+
+    if (typeof rightIndex === 'number') {
+      return 1
+    }
+
+    return left.title.localeCompare(right.title, 'pt-BR')
+  })
+}
+
+const listCourseLessonProgress = async (userId: string, courseId: string) => {
+  const lessonProgressSnapshot = await getFirebaseAdminCollection('lessonProgress').where('userId', '==', userId).get()
+
+  return lessonProgressSnapshot.docs
+    .map(toLessonProgressDocument)
+    .filter((lessonProgress) => lessonProgress.courseId === courseId)
+}
+
 const sortModuleLessons = (module: CourseModule, lessons: Lesson[]) => {
   const lessonOrderIndex = new Map(module.lessonIds.map((lessonId, index) => [lessonId, index]))
 
@@ -174,13 +227,12 @@ const getContinueWatchingHref = async (
   modules: CourseModule[],
   lessons: Lesson[]
 ) => {
-  const lessonProgressSnapshot = await getFirebaseAdminCollection('lessonProgress').where('userId', '==', session.user.id).get()
+  const courseLessonProgress = await listCourseLessonProgress(session.user.id, course.id)
   const moduleById = new Map(modules.map((module) => [module.id, module]))
   const lessonById = new Map(lessons.map((lesson) => [lesson.id, lesson]))
 
-  const latestStartedLessonProgress = lessonProgressSnapshot.docs
-    .map(toLessonProgressDocument)
-    .filter((lessonProgress) => lessonProgress.courseId === course.id && hasLessonProgressStarted(lessonProgress))
+  const latestStartedLessonProgress = courseLessonProgress
+    .filter(hasLessonProgressStarted)
     .sort((left, right) => toTimestampNumber(right.updatedAt) - toTimestampNumber(left.updatedAt))
     .find((lessonProgress) => {
       const lesson = lessonById.get(lessonProgress.lessonId)
@@ -201,6 +253,33 @@ const getContinueWatchingHref = async (
   }
 
   return `/curso/${course.slug}/modulo/${module.slug}/aula/${lesson.slug}`
+}
+
+const getModuleProgress = (module: CourseModule, lessons: Lesson[], lessonProgressList: LessonProgress[]) => {
+  const moduleLessons = listModuleLessons(module, lessons)
+  const totalLessons = moduleLessons.length
+
+  if (totalLessons === 0) {
+    return {
+      completionPercentage: 0,
+      completedLessons: 0,
+      totalLessons: 0
+    }
+  }
+
+  const completedLessonIds = new Set(
+    lessonProgressList
+      .filter((lessonProgress) => lessonProgress.moduleId === module.id && isLessonProgressCompleted(lessonProgress))
+      .map((lessonProgress) => lessonProgress.lessonId)
+  )
+
+  const completedLessons = moduleLessons.filter((lesson) => completedLessonIds.has(lesson.id)).length
+
+  return {
+    completionPercentage: Math.round((completedLessons / totalLessons) * 100),
+    completedLessons,
+    totalLessons
+  }
 }
 
 const listStudentCourses = async (userId: string) => {
@@ -277,5 +356,34 @@ export const getAccessibleCourseDetailBySlug = async (session: AuthSessionContex
       startCourseHref: firstCourseLesson?.href || null,
       continueWatchingHref: await getContinueWatchingHref(session, course, modules, lessons)
     }
+  }
+}
+
+export const getAccessibleModuleDetailBySlugs = async (
+  session: AuthSessionContext,
+  courseSlug: string,
+  moduleSlug: string
+) => {
+  if (!moduleSlug.trim()) {
+    throw createHttpError(400, 'Informe um slug de modulo valido.')
+  }
+
+  const courseDetail = await getAccessibleCourseDetailBySlug(session, courseSlug)
+  const module = courseDetail.modules.find((courseModule) => courseModule.slug === moduleSlug.trim())
+
+  if (!module) {
+    throw createHttpError(404, 'Modulo nao encontrado.')
+  }
+
+  const courseLessons = await listCourseLessons(courseDetail.course)
+  const lessons = listModuleLessons(module, courseLessons)
+  const assessments = await listModuleAssessments(module)
+  const courseLessonProgress = await listCourseLessonProgress(session.user.id, courseDetail.course.id)
+
+  return {
+    module,
+    lessons,
+    assessment: assessments[0] || null,
+    progress: getModuleProgress(module, courseLessons, courseLessonProgress)
   }
 }

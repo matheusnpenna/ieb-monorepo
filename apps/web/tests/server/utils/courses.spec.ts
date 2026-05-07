@@ -1,4 +1,4 @@
-import type { Course, CourseEnrollment, CourseModule, Lesson, LessonProgress } from '@ieb/shared'
+import type { Assessment, Course, CourseEnrollment, CourseModule, Lesson, LessonProgress } from '@ieb/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { getFirebaseAdminCollection } = vi.hoisted(() => ({
@@ -9,7 +9,7 @@ vi.mock('../../../server/utils/firebase-admin', () => ({
   getFirebaseAdminCollection
 }))
 
-import { getAccessibleCourseDetailBySlug, listAccessibleCourses } from '../../../server/utils/courses'
+import { getAccessibleCourseDetailBySlug, getAccessibleModuleDetailBySlugs, listAccessibleCourses } from '../../../server/utils/courses'
 
 const buildCourse = (overrides: Partial<Course> & Pick<Course, 'id' | 'title' | 'slug'>): Course => ({
   id: overrides.id,
@@ -108,6 +108,26 @@ const buildLessonProgress = (
   lastPositionInSeconds: overrides.lastPositionInSeconds ?? 120,
   markedAsCompleted: overrides.markedAsCompleted ?? false,
   completedAt: overrides.completedAt ?? null,
+  createdAt: overrides.createdAt || '2026-01-01T00:00:00.000Z',
+  updatedAt: overrides.updatedAt || '2026-01-01T00:00:00.000Z',
+  deletedAt: overrides.deletedAt ?? null,
+  createdBy: overrides.createdBy ?? null,
+  updatedBy: overrides.updatedBy ?? null,
+  deletedBy: overrides.deletedBy ?? null
+})
+
+const buildAssessment = (
+  overrides: Partial<Assessment> & Pick<Assessment, 'id' | 'courseId' | 'moduleId' | 'title' | 'slug'>
+): Assessment => ({
+  id: overrides.id,
+  courseId: overrides.courseId,
+  moduleId: overrides.moduleId,
+  title: overrides.title,
+  slug: overrides.slug,
+  description: overrides.description || 'Descricao da avaliacao',
+  passingScore: overrides.passingScore ?? 70,
+  timeLimitInMinutes: overrides.timeLimitInMinutes ?? 30,
+  questions: overrides.questions ?? [],
   createdAt: overrides.createdAt || '2026-01-01T00:00:00.000Z',
   updatedAt: overrides.updatedAt || '2026-01-01T00:00:00.000Z',
   deletedAt: overrides.deletedAt ?? null,
@@ -482,6 +502,297 @@ describe('getAccessibleCourseDetailBySlug', () => {
     ).rejects.toMatchObject({
       statusCode: 403,
       statusMessage: 'Voce nao tem acesso a este curso.'
+    })
+  })
+})
+
+describe('getAccessibleModuleDetailBySlugs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns the module detail with ordered lessons, assessment and progress summary', async () => {
+    const course = buildCourse({
+      id: 'curso-de-teologia-basica',
+      title: 'Curso de Teologia Basica',
+      slug: 'curso-de-teologia-basica',
+      moduleIds: ['modulo-01']
+    })
+    const module = buildModule({
+      id: 'modulo-01',
+      courseId: course.id,
+      title: 'Modulo 01',
+      slug: 'fundamentos',
+      lessonIds: ['aula-02', 'aula-01', 'aula-03'],
+      assessmentIds: ['avaliacao-02', 'avaliacao-01']
+    })
+    const lessonOne = buildLesson({
+      id: 'aula-01',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Aula 01',
+      slug: 'aula-01',
+      order: 2
+    })
+    const lessonTwo = buildLesson({
+      id: 'aula-02',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Aula 02',
+      slug: 'aula-02',
+      order: 3
+    })
+    const lessonThree = buildLesson({
+      id: 'aula-03',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Aula 03',
+      slug: 'aula-03',
+      order: 1
+    })
+    const selectedAssessment = buildAssessment({
+      id: 'avaliacao-02',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Avaliacao principal',
+      slug: 'avaliacao-principal'
+    })
+    const secondaryAssessment = buildAssessment({
+      id: 'avaliacao-01',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Avaliacao secundaria',
+      slug: 'avaliacao-secundaria'
+    })
+
+    const coursesCollection = {
+      doc: vi.fn(() => ({
+        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
+      }))
+    }
+
+    const enrollmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            {
+              data: () =>
+                buildEnrollment({
+                  id: 'enrollment-1',
+                  userId: 'student-1',
+                  courseId: course.id,
+                  status: 'active'
+                })
+            }
+          ]
+        })
+      })
+    }
+
+    const modulesCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [createDocumentSnapshot(module)]
+        })
+      })
+    }
+
+    const lessonsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            createDocumentSnapshot(lessonOne),
+            createDocumentSnapshot(lessonTwo),
+            createDocumentSnapshot(lessonThree)
+          ]
+        })
+      })
+    }
+
+    const assessmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            createDocumentSnapshot(secondaryAssessment),
+            createDocumentSnapshot(selectedAssessment)
+          ]
+        })
+      })
+    }
+
+    const lessonProgressCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            createDocumentSnapshot(
+              buildLessonProgress({
+                id: 'lesson-progress-1',
+                userId: 'student-1',
+                courseId: course.id,
+                moduleId: module.id,
+                lessonId: lessonOne.id,
+                completionRate: 100,
+                watchedMinutes: 20,
+                lastPositionInSeconds: 900
+              })
+            ),
+            createDocumentSnapshot(
+              buildLessonProgress({
+                id: 'lesson-progress-2',
+                userId: 'student-1',
+                courseId: course.id,
+                moduleId: module.id,
+                lessonId: lessonThree.id,
+                markedAsCompleted: true,
+                watchedMinutes: 15,
+                lastPositionInSeconds: 600
+              })
+            ),
+            createDocumentSnapshot(
+              buildLessonProgress({
+                id: 'lesson-progress-3',
+                userId: 'student-1',
+                courseId: course.id,
+                moduleId: module.id,
+                lessonId: lessonTwo.id,
+                completionRate: 60,
+                watchedMinutes: 10,
+                lastPositionInSeconds: 300
+              })
+            )
+          ]
+        })
+      })
+    }
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') return coursesCollection
+      if (collectionName === 'enrollments') return enrollmentsCollection
+      if (collectionName === 'modules') return modulesCollection
+      if (collectionName === 'lessons') return lessonsCollection
+      if (collectionName === 'assessments') return assessmentsCollection
+      if (collectionName === 'lessonProgress') return lessonProgressCollection
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const detail = await getAccessibleModuleDetailBySlugs(
+      {
+        user: {
+          id: 'student-1',
+          email: 'student@example.com',
+          fullName: 'Student One',
+          role: 'student',
+          status: 'active',
+          region: 'feira-de-santana',
+          avatarUrl: null
+        },
+        issuedAt: '2026-05-07T00:00:00.000Z'
+      },
+      course.slug,
+      module.slug
+    )
+
+    expect(detail.module.id).toBe(module.id)
+    expect(detail.lessons.map((lesson) => lesson.id)).toEqual(['aula-02', 'aula-01', 'aula-03'])
+    expect(detail.assessment?.id).toBe('avaliacao-02')
+    expect(detail.progress).toEqual({
+      completionPercentage: 67,
+      completedLessons: 2,
+      totalLessons: 3
+    })
+  })
+
+  it('throws when the requested module does not belong to the accessible course', async () => {
+    const course = buildCourse({
+      id: 'curso-de-teologia-basica',
+      title: 'Curso de Teologia Basica',
+      slug: 'curso-de-teologia-basica',
+      moduleIds: ['modulo-01']
+    })
+    const module = buildModule({
+      id: 'modulo-01',
+      courseId: course.id,
+      title: 'Modulo 01',
+      slug: 'fundamentos'
+    })
+
+    const coursesCollection = {
+      doc: vi.fn(() => ({
+        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
+      }))
+    }
+
+    const enrollmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            {
+              data: () =>
+                buildEnrollment({
+                  id: 'enrollment-1',
+                  userId: 'student-1',
+                  courseId: course.id,
+                  status: 'active'
+                })
+            }
+          ]
+        })
+      })
+    }
+
+    const modulesCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [createDocumentSnapshot(module)]
+        })
+      })
+    }
+
+    const lessonsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: []
+        })
+      })
+    }
+
+    const lessonProgressCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: []
+        })
+      })
+    }
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') return coursesCollection
+      if (collectionName === 'enrollments') return enrollmentsCollection
+      if (collectionName === 'modules') return modulesCollection
+      if (collectionName === 'lessons') return lessonsCollection
+      if (collectionName === 'lessonProgress') return lessonProgressCollection
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    await expect(
+      getAccessibleModuleDetailBySlugs(
+        {
+          user: {
+            id: 'student-1',
+            email: 'student@example.com',
+            fullName: 'Student One',
+            role: 'student',
+            status: 'active',
+            region: 'feira-de-santana',
+            avatarUrl: null
+          },
+          issuedAt: '2026-05-07T00:00:00.000Z'
+        },
+        course.slug,
+        'modulo-inexistente'
+      )
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Modulo nao encontrado.'
     })
   })
 })

@@ -1,4 +1,4 @@
-import type { Course, CourseModule } from './database'
+import type { Assessment, Course, CourseModule, Lesson } from './database'
 
 export interface ApiSuccessResponse<T> {
   status: 'success'
@@ -28,3 +28,18 @@ export interface CourseDetailData {
 }
 
 export type CourseDetailResponse = ApiResponse<CourseDetailData | null>
+
+export interface ModuleDetailProgress {
+  completionPercentage: number
+  completedLessons: number
+  totalLessons: number
+}
+
+export interface ModuleDetailData {
+  module: CourseModule
+  lessons: Lesson[]
+  assessment: Assessment | null
+  progress: ModuleDetailProgress
+}
+
+export type ModuleDetailResponse = ApiResponse<ModuleDetailData | null>
