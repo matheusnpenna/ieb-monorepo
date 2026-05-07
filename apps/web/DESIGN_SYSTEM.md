@@ -44,6 +44,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiTextarea`: textarea padrao.
 - `UiSpinner`: indicador de carregamento reutilizavel para estados async.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
+- `UiConfirmationModal`: modal global de confirmacao para acoes sensiveis.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
 - `LessonVideoPlayer`: player reutilizavel para aulas em video com suporte a HLS.
 - `AppFooter`, `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
@@ -98,6 +99,13 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - O componente deve ser reutilizavel em listas, acoes assíncronas e telas intermediarias.
 - O visual deve manter contraste alto com acento vermelho, sem fugir da linguagem dark cinematografica.
 - Sempre manter rotulo acessivel via `aria-label`, com opcao de texto visivel ao lado quando fizer sentido.
+
+## Modal de confirmacao
+
+- `UiConfirmationModal` e o padrao oficial para confirmar exclusoes, saidas e outras acoes sensiveis.
+- O componente deve ser montado uma unica vez no layout que precisa oferecer esse recurso.
+- A abertura, o fechamento, o titulo, a mensagem e as acoes do modal devem ser controlados exclusivamente por `useConfirmationModal`.
+- Paginas e componentes consumidores nao devem renderizar instancias extras do modal localmente.
 
 ## Grid de cursos
 

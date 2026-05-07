@@ -1,17 +1,13 @@
 <script setup lang="ts">
 import type {
-  LessonCommentItem,
-  LessonCommentResponse,
-  LessonCommentsResponse,
   LessonDetailProgress,
   LessonDetailResponse,
   LessonProgressUpdateResponse
 } from '@ieb/shared'
+import LessonCommentsPanel from '../../../../../../components/content/LessonCommentsPanel.vue'
 import SurfaceCard from '../../../../../../components/base/SurfaceCard.vue'
 import UiButton from '../../../../../../components/ui/UiButton.vue'
-import UiField from '../../../../../../components/ui/UiField.vue'
 import UiSpinner from '../../../../../../components/ui/UiSpinner.vue'
-import UiTextarea from '../../../../../../components/ui/UiTextarea.vue'
 import LessonVideoPlayer from '../../../../../../components/content/LessonVideoPlayer.vue'
 import { getRequestErrorMessage } from '../../../../../../lib/utils'
 
@@ -36,11 +32,6 @@ const defaultLessonDetailResponse = {
   data: null
 } satisfies LessonDetailResponse
 
-const defaultCommentsResponse = {
-  status: 'success',
-  data: []
-} satisfies LessonCommentsResponse
-
 const { data: lessonDetailResponse, pending: lessonPending } = await useAsyncData<LessonDetailResponse>(
   () => `lesson-detail-${courseSlug.value}-${moduleSlug.value}-${lessonSlug.value}`,
   () =>
@@ -51,19 +42,6 @@ const { data: lessonDetailResponse, pending: lessonPending } = await useAsyncDat
   {
     watch: [courseSlug, moduleSlug, lessonSlug],
     default: () => defaultLessonDetailResponse
-  }
-)
-
-const { data: commentsResponse, pending: commentsPending } = await useAsyncData<LessonCommentsResponse>(
-  () => `lesson-comments-${courseSlug.value}-${moduleSlug.value}-${lessonSlug.value}`,
-  () =>
-    $fetch(`/api/courses/${courseSlug.value}/modules/${moduleSlug.value}/lessons/${lessonSlug.value}/comments`, {
-      credentials: 'include',
-      ignoreResponseError: true
-    }),
-  {
-    watch: [courseSlug, moduleSlug, lessonSlug],
-    default: () => defaultCommentsResponse
   }
 )
 
@@ -86,34 +64,12 @@ const lessonErrorMessage = computed(() => {
   return lessonDetailResponse.value.messages[0] || 'Nao foi possivel carregar a aula.'
 })
 
-const commentsErrorMessage = computed(() => {
-  if (!commentsResponse.value || commentsResponse.value.status !== 'error') {
-    return ''
-  }
-
-  return commentsResponse.value.messages[0] || 'Nao foi possivel carregar os comentarios.'
-})
-
 const lessonProgressState = ref<LessonDetailProgress | null>(null)
-const commentsList = ref<LessonCommentItem[]>([])
 
 watch(
   () => lessonDetail.value?.progress,
   (progress) => {
     lessonProgressState.value = progress ? { ...progress } : null
-  },
-  { immediate: true }
-)
-
-watch(
-  () => commentsResponse.value,
-  (response) => {
-    if (!response || response.status !== 'success') {
-      commentsList.value = []
-      return
-    }
-
-    commentsList.value = [...response.data]
   },
   { immediate: true }
 )
@@ -217,121 +173,6 @@ const markLessonAsCompleted = async () => {
     isCompletingLesson.value = false
   }
 }
-
-const newComment = ref('')
-const commentActionErrorMessage = ref('')
-const isSubmittingComment = ref(false)
-const editingCommentId = ref<string | null>(null)
-const editingCommentContent = ref('')
-const busyCommentId = ref<string | null>(null)
-
-const submitComment = async () => {
-  if (!newComment.value.trim() || isSubmittingComment.value) {
-    return
-  }
-
-  commentActionErrorMessage.value = ''
-  isSubmittingComment.value = true
-
-  try {
-    const response = await $fetch<LessonCommentResponse>(
-      `/api/courses/${courseSlug.value}/modules/${moduleSlug.value}/lessons/${lessonSlug.value}/comments`,
-      {
-        method: 'POST',
-        credentials: 'include',
-        body: {
-          content: newComment.value
-        }
-      }
-    )
-
-    if (response.status === 'success' && response.data) {
-      commentsList.value = [...commentsList.value, response.data]
-      newComment.value = ''
-    }
-  } catch (error) {
-    commentActionErrorMessage.value = getRequestErrorMessage(error, 'Nao foi possivel publicar o comentario.')
-  } finally {
-    isSubmittingComment.value = false
-  }
-}
-
-const startEditingComment = (comment: LessonCommentItem) => {
-  editingCommentId.value = comment.id
-  editingCommentContent.value = comment.content
-  commentActionErrorMessage.value = ''
-}
-
-const cancelEditingComment = () => {
-  editingCommentId.value = null
-  editingCommentContent.value = ''
-}
-
-const saveEditedComment = async (commentId: string) => {
-  if (!editingCommentContent.value.trim() || busyCommentId.value) {
-    return
-  }
-
-  commentActionErrorMessage.value = ''
-  busyCommentId.value = commentId
-
-  try {
-    const response = await $fetch<LessonCommentResponse>(
-      `/api/courses/${courseSlug.value}/modules/${moduleSlug.value}/lessons/${lessonSlug.value}/comments/${commentId}`,
-      {
-        method: 'PATCH',
-        credentials: 'include',
-        body: {
-          content: editingCommentContent.value
-        }
-      }
-    )
-
-    if (response.status === 'success' && response.data) {
-      commentsList.value = commentsList.value.map((comment) => (comment.id === commentId ? response.data! : comment))
-      cancelEditingComment()
-    }
-  } catch (error) {
-    commentActionErrorMessage.value = getRequestErrorMessage(error, 'Nao foi possivel editar o comentario.')
-  } finally {
-    busyCommentId.value = null
-  }
-}
-
-const deleteComment = async (commentId: string) => {
-  if (busyCommentId.value) {
-    return
-  }
-
-  commentActionErrorMessage.value = ''
-  busyCommentId.value = commentId
-
-  try {
-    await $fetch<LessonCommentResponse>(
-      `/api/courses/${courseSlug.value}/modules/${moduleSlug.value}/lessons/${lessonSlug.value}/comments/${commentId}`,
-      {
-        method: 'DELETE',
-        credentials: 'include'
-      }
-    )
-
-    commentsList.value = commentsList.value.filter((comment) => comment.id !== commentId)
-
-    if (editingCommentId.value === commentId) {
-      cancelEditingComment()
-    }
-  } catch (error) {
-    commentActionErrorMessage.value = getRequestErrorMessage(error, 'Nao foi possivel excluir o comentario.')
-  } finally {
-    busyCommentId.value = null
-  }
-}
-
-const formatCommentTimestamp = (value: string) =>
-  new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(value))
 
 useSeoMeta({
   title: computed(() => (lesson.value?.title ? `Aula ${lesson.value.title}` : `Aula ${lessonSlug.value}`).trim())
@@ -455,112 +296,11 @@ useSeoMeta({
       </div>
     </SurfaceCard>
 
-    <SurfaceCard>
-      <div class="section-stack">
-        <div class="comments-header">
-          <div class="section-stack">
-            <h2 class="section-title">Comentários</h2>
-            <p class="body-copy">Compartilhe dúvidas, percepções e anotações sobre esta aula.</p>
-          </div>
-        </div>
-
-        <UiField label="Novo comentario">
-          <UiTextarea
-            v-model="newComment"
-            :rows="4"
-            placeholder="Escreva seu comentario sobre esta aula"
-          />
-        </UiField>
-
-        <div class="comments-actions">
-          <UiButton :loading="isSubmittingComment" :disabled="!newComment.trim()" @click="submitComment">
-            Publicar comentario
-          </UiButton>
-        </div>
-
-        <p v-if="commentActionErrorMessage" class="completion-feedback">
-          {{ commentActionErrorMessage }}
-        </p>
-        <p v-if="commentsErrorMessage" class="body-copy">{{ commentsErrorMessage }}</p>
-        <p v-else-if="commentsPending" class="lesson-loading">
-          <UiSpinner aria-label="Carregando comentarios" />
-          <span>Carregando comentarios...</span>
-        </p>
-        <div v-else-if="commentsList.length > 0" class="comments-list">
-          <SurfaceCard
-            v-for="comment in commentsList"
-            :key="comment.id"
-            as="article"
-            class="comment-card"
-          >
-            <div class="section-stack">
-              <div class="comment-header">
-                <div class="section-stack comment-author">
-                  <strong>{{ comment.author.fullName }}</strong>
-                  <span class="lesson-meta">
-                    {{ formatCommentTimestamp(comment.createdAt) }}
-                    <template v-if="comment.isEdited"> · Editado</template>
-                  </span>
-                </div>
-
-                <div v-if="comment.canEdit || comment.canDelete" class="comment-controls">
-                  <UiButton
-                    v-if="comment.canEdit"
-                    variant="ghost"
-                    size="sm"
-                    :disabled="busyCommentId === comment.id"
-                    @click="startEditingComment(comment)"
-                  >
-                    Editar
-                  </UiButton>
-                  <UiButton
-                    v-if="comment.canDelete"
-                    variant="ghost"
-                    size="sm"
-                    :disabled="busyCommentId === comment.id"
-                    @click="deleteComment(comment.id)"
-                  >
-                    Excluir
-                  </UiButton>
-                </div>
-              </div>
-
-              <template v-if="editingCommentId === comment.id">
-                <UiField label="Editar comentario">
-                  <UiTextarea
-                    v-model="editingCommentContent"
-                    :rows="4"
-                    placeholder="Atualize seu comentario"
-                  />
-                </UiField>
-                <div class="comments-actions">
-                  <UiButton
-                    size="sm"
-                    :loading="busyCommentId === comment.id"
-                    :disabled="!editingCommentContent.trim()"
-                    @click="saveEditedComment(comment.id)"
-                  >
-                    Salvar
-                  </UiButton>
-                  <UiButton
-                    variant="secondary"
-                    size="sm"
-                    :disabled="busyCommentId === comment.id"
-                    @click="cancelEditingComment"
-                  >
-                    Cancelar
-                  </UiButton>
-                </div>
-              </template>
-              <p v-else class="body-copy">{{ comment.content }}</p>
-            </div>
-          </SurfaceCard>
-        </div>
-        <p v-else class="body-copy">
-          Nenhum comentario foi publicado nesta aula ainda.
-        </p>
-      </div>
-    </SurfaceCard>
+    <LessonCommentsPanel
+      :course-slug="courseSlug"
+      :module-slug="moduleSlug"
+      :lesson-slug="lessonSlug"
+    />
   </div>
 </template>
 
@@ -610,31 +350,8 @@ useSeoMeta({
   line-height: 1.75;
 }
 
-.comments-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.comment-card {
-  height: 100%;
-}
-
-.comment-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.comment-author {
-  gap: 0.25rem;
-}
-
 @media (max-width: 720px) {
-  .lesson-navigation,
-  .comments-actions,
-  .comment-controls,
-  .comment-header {
+  .lesson-navigation {
     flex-direction: column;
     align-items: flex-start;
   }
