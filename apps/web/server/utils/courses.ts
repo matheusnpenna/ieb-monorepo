@@ -89,6 +89,17 @@ const normalizeCourseSlug = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-')
 
+const createFourDigitSlugHash = (value: string, salt = 0) => {
+  const normalizedValue = `${value}:${salt}`
+  let hash = 0
+
+  for (let index = 0; index < normalizedValue.length; index += 1) {
+    hash = (hash * 31 + normalizedValue.charCodeAt(index)) % 9000
+  }
+
+  return String(hash + 1000)
+}
+
 const toTimestampNumber = (timestamp: string | null | undefined) => {
   if (!timestamp) {
     return 0
@@ -127,9 +138,12 @@ const getCourseById = async (courseId: string) => {
   return toCourseDocument(snapshot)
 }
 
-const assertAdminCoursePayload = (input: AdminCourseInput, currentCourseSlug?: string) => {
-  const normalizedSlug = normalizeCourseSlug(input.slug)
-  const normalizedCurrentCourseSlug = currentCourseSlug ? normalizeCourseSlug(currentCourseSlug) : null
+const assertAdminCoursePayload = (
+  input: AdminCourseInput,
+  options?: { currentCourseSlug?: string; resolvedSlug?: string }
+) => {
+  const normalizedSlug = normalizeCourseSlug(options?.resolvedSlug || input.slug || input.title)
+  const normalizedCurrentCourseSlug = options?.currentCourseSlug ? normalizeCourseSlug(options.currentCourseSlug) : null
 
   if (!input.title.trim()) {
     throw createHttpError(400, 'Informe o titulo do curso.')
@@ -166,14 +180,43 @@ const assertAdminCoursePayload = (input: AdminCourseInput, currentCourseSlug?: s
   return normalizedSlug
 }
 
+const resolveUniqueAdminCourseSlug = async (input: AdminCourseInput) => {
+  const baseSlug = normalizeCourseSlug(input.slug || input.title)
+
+  if (!baseSlug || !COURSE_SLUG_REGEX.test(baseSlug)) {
+    throw createHttpError(400, 'Informe um slug de curso valido.')
+  }
+
+  const existingBaseCourse = await getCourseById(baseSlug)
+
+  if (!existingBaseCourse) {
+    return baseSlug
+  }
+
+  for (let salt = 0; salt < 50; salt += 1) {
+    const hash = createFourDigitSlugHash(baseSlug, salt)
+    const nextSlug = `${hash}-${baseSlug}`
+    const existingCourse = await getCourseById(nextSlug)
+
+    if (!existingCourse) {
+      return nextSlug
+    }
+  }
+
+  throw createHttpError(500, 'Nao foi possivel gerar um slug unico para o curso.')
+}
+
 const buildAdminCoursePayload = (
   input: AdminCourseInput,
   actorUserId: string,
-  options?: { existingCourse?: Course | null }
+  options?: { existingCourse?: Course | null; resolvedSlug?: string }
 ): Course => {
   const existingCourse = options?.existingCourse || null
   const now = toTimestamp()
-  const normalizedSlug = assertAdminCoursePayload(input, existingCourse?.slug)
+  const normalizedSlug = assertAdminCoursePayload(input, {
+    currentCourseSlug: existingCourse?.slug,
+    resolvedSlug: options?.resolvedSlug
+  })
 
   return {
     id: normalizedSlug,
@@ -582,12 +625,8 @@ export const createAdminCourse = async (session: AuthSessionContext, input: Admi
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  const coursePayload = buildAdminCoursePayload(input, session.user.id)
-  const existingCourse = await getCourseById(coursePayload.slug)
-
-  if (existingCourse) {
-    throw createHttpError(409, 'Ja existe um curso com este slug.')
-  }
+  const resolvedSlug = await resolveUniqueAdminCourseSlug(input)
+  const coursePayload = buildAdminCoursePayload(input, session.user.id, { resolvedSlug })
 
   await getFirebaseAdminCollection('courses').doc(coursePayload.slug).set(coursePayload)
   await writeAdminLog(session, {

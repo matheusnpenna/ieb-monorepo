@@ -2,9 +2,19 @@ export const cn = (...values: Array<string | false | null | undefined>) =>
   values.filter(Boolean).join(' ')
 
 export const getRequestErrorMessage = (error: unknown, fallback: string) => {
-  const requestError = error as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
+  const requestError = error as {
+    data?: { statusMessage?: string; messages?: string[] }
+    statusMessage?: string
+    message?: string
+  }
 
-  return requestError?.data?.statusMessage || requestError?.statusMessage || requestError?.message || fallback
+  return (
+    requestError?.data?.messages?.[0] ||
+    requestError?.data?.statusMessage ||
+    requestError?.statusMessage ||
+    requestError?.message ||
+    fallback
+  )
 }
 
 export const resolveSafeRedirect = (value: unknown, fallback = '/home') => {

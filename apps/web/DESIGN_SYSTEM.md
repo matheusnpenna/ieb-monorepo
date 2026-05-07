@@ -69,6 +69,19 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Toda acao principal deve usar `UiButton` com `variant="primary"`.
 - Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
 - Toda acao positiva de confirmacao ou sucesso pode usar `UiButton` com `variant="success"` quando o verde comunicar melhor que o vermelho.
+- Quando a cor do texto do botao precisar fugir da cor padrao da `variant`, use `UiButton` com `textColor`.
+- `textColor` aceita todos os tokens oficiais de cor do sistema:
+  - `bg`
+  - `bg-elevated`
+  - `surface`
+  - `surface-strong`
+  - `border`
+  - `text`
+  - `muted`
+  - `accent`
+  - `accent-strong`
+  - `success`
+  - `danger`
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.

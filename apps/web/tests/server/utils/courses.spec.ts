@@ -486,6 +486,67 @@ describe('admin course management', () => {
       })
     )
   })
+
+  it('creates a unique slug automatically when a course with the same base slug already exists', async () => {
+    const existingCourse = buildCourse({
+      id: 'curso-de-lideranca',
+      title: 'Curso de Lideranca',
+      slug: 'curso-de-lideranca'
+    })
+    const adminLogSet = vi.fn().mockResolvedValue(undefined)
+    const storedCourses = new Map<string, Course>([[existingCourse.id, existingCourse]])
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedCourses.has(documentId)
+                ? createDocumentSnapshot(storedCourses.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>) => {
+              if (documentId) {
+                storedCourses.set(documentId, payload as Course)
+              }
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'adminLogs') {
+        return {
+          doc: vi.fn(() => ({
+            id: 'log-1',
+            set: adminLogSet
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const createdCourse = await createAdminCourse(adminSession, {
+      title: 'Curso de Lideranca',
+      slug: '',
+      shortDescription: 'Descricao curta',
+      description: 'Descricao completa do curso',
+      visibility: 'draft',
+      coverImageUrl: null,
+      heroImageUrl: null,
+      totalDurationInMinutes: 180,
+      requiredCompletionRate: 80,
+      certificateEnabled: true
+    })
+
+    expect(createdCourse.slug).toMatch(/^\d{4}-curso-de-lideranca$/)
+    expect(createdCourse.slug).not.toBe('curso-de-lideranca')
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetId: createdCourse.slug
+      })
+    )
+  })
 })
 
 describe('getHomeMetrics', () => {

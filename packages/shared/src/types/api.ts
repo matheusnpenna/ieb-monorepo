@@ -49,6 +49,14 @@ export interface AdminCourseInput {
 export type AdminCoursesResponse = ApiResponse<Course[]>
 export type AdminCourseResponse = ApiResponse<Course | null>
 
+export interface AdminUploadedImageData {
+  url: string
+  path: string
+  filename: string
+}
+
+export type AdminUploadedImageResponse = ApiResponse<AdminUploadedImageData | null>
+
 export interface CourseDetailActionLinks {
   startCourseHref: string | null
   continueWatchingHref: string | null

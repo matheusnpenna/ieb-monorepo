@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AdminCoursesManager from '../../../components/admin/AdminCoursesManager.vue'
+import AdminCoursesListView from '../../../components/admin/AdminCoursesListView.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -11,5 +11,5 @@ useSeoMeta({
 </script>
 
 <template>
-  <AdminCoursesManager />
+  <AdminCoursesListView />
 </template>
