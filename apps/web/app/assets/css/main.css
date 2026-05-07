@@ -96,7 +96,7 @@ textarea {
 .display-title {
   margin: 0;
   font-family: 'Fraunces', serif;
-  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-size: clamp(1.5rem, 3vw, 3rem);
   line-height: 0.93;
   letter-spacing: -0.04em;
   color: var(--ds-text);

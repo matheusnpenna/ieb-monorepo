@@ -21,29 +21,23 @@ const lessonActions = [
 
 <template>
   <div class="section-stack">
-    <SurfaceCard>
-      <div class="section-stack">
-        <span class="pill">Aula</span>
-        <h1 class="display-title">{{ lessonSlug }}</h1>
-        <p class="body-copy">
-          Template inicial para o player com HLS.js, resumo da aula e area de acompanhamento do progresso.
-        </p>
-      </div>
-    </SurfaceCard>
+    <div class="flex items-center gap-5">
+      <span class="pill w-fit">Aula</span>
+      <h1 class="display-title">Titulo da aula</h1>
+    </div>
 
     <SurfaceCard>
       <div class="section-stack">
-        <h2 class="section-title">Player placeholder</h2>
         <div class="player-placeholder">Area reservada para video, texto ou audio.</div>
       </div>
     </SurfaceCard>
 
     <SurfaceCard>
       <div class="section-stack">
-        <h2 class="section-title">Acoes do aluno</h2>
-        <ul class="list-clean section-stack">
-          <li v-for="action in lessonActions" :key="action" class="body-copy">{{ action }}</li>
-        </ul>
+        <h2 class="section-title">Informações</h2>
+        <p class="body-copy">
+          Template inicial para o player com HLS.js, resumo da aula e area de acompanhamento do progresso.
+        </p>
       </div>
     </SurfaceCard>
   </div>
