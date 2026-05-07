@@ -11,8 +11,11 @@ const { openConfirmationModal } = useConfirmationModal()
 const isLoggingOut = ref(false)
 
 const links = [
-  { label: 'Home', to: '/home' },
-  { label: 'Cursos', to: '/curso/fundamentos-da-videira' },
+  { label: 'Home',      to: '/home', target: '_self' },
+  { label: 'Instagram', to: 'https://www.instagram.com/comunidadevideira/',          target: '_blank' },
+  { label: 'Youtube',   to: "https://www.youtube.com/@VideiraTV",                    target: '_blank' },
+  { label: 'Podcasts',  to: "https://www.youtube.com/@VideiraTV/podcasts",           target: '_blank' },
+  { label: 'Macros e Celebrações', to: "https://www.youtube.com/@VideiraTV/streams", target: '_blank' }
 ]
 
 const accountMenuItems = computed(() => [
@@ -73,7 +76,7 @@ const onAccountMenuSelect = async (itemId: string) => {
       <BrandMark mode="icon" to="/home" />
       <div class="nav-group">
         <nav class="nav-links">
-          <NuxtLink v-for="link in links" :key="link.to" :to="link.to">
+          <NuxtLink v-for="link in links" :key="link.to" :to="link.to" :target="link.target">
             {{ link.label }}
           </NuxtLink>
           <NuxtLink v-if="user?.role === 'admin'" to="/admin">Admin</NuxtLink>
