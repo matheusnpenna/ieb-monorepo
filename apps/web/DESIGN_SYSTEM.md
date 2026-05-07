@@ -45,6 +45,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiSpinner`: indicador de carregamento reutilizavel para estados async.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
+- `LessonVideoPlayer`: player reutilizavel para aulas em video com suporte a HLS.
 - `AppFooter`, `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 
 ## Marca e assets
@@ -104,6 +105,15 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Cada card deve exibir capa, titulo, descricao curta, slug e meta resumida do curso.
 - O hover da capa deve ampliar somente a imagem interna, sem aumentar o tamanho externo do card.
 - Quando `coverImageUrl` estiver ausente, usar o fallback `app/assets/img/logos/videira-logo.svg`.
+
+## Player de aula
+
+- `LessonVideoPlayer` e o padrao oficial para reproducao de aulas em video.
+- O componente deve encapsular a integracao com `hls.js`, mantendo a pagina consumidora responsavel apenas por dados e eventos.
+- O componente deve suportar links `m3u8`, YouTube e Vimeo usando `Plyr` como UI principal.
+- Links de YouTube e Vimeo devem ser normalizados automaticamente quando chegarem fora do formato embed.
+- O player deve aceitar um ponto inicial de reproducao para retomar o video de onde o aluno parou.
+- Eventos de progresso devem permitir persistir o ponto atual e o estado de conclusao da aula.
 
 ## Footer compartilhado
 
