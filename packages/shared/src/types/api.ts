@@ -35,11 +35,22 @@ export interface ModuleDetailProgress {
   totalLessons: number
 }
 
+export interface ModuleDetailLesson extends Lesson {
+  isCompleted: boolean
+}
+
 export interface ModuleDetailData {
   module: CourseModule
-  lessons: Lesson[]
+  lessons: ModuleDetailLesson[]
   assessment: Assessment | null
   progress: ModuleDetailProgress
 }
 
 export type ModuleDetailResponse = ApiResponse<ModuleDetailData | null>
+
+export interface LessonCompletionData {
+  lessonId: string
+  isCompleted: true
+}
+
+export type LessonCompletionResponse = ApiResponse<LessonCompletionData | null>

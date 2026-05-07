@@ -1,4 +1,13 @@
-import type { Assessment, AuthSessionContext, Course, CourseEnrollment, CourseModule, Lesson, LessonProgress } from '@ieb/shared'
+import type {
+  Assessment,
+  AuthSessionContext,
+  Course,
+  CourseEnrollment,
+  CourseModule,
+  Lesson,
+  LessonProgress,
+  ModuleDetailLesson
+} from '@ieb/shared'
 import { createError } from 'h3'
 import { getFirebaseAdminCollection } from './firebase-admin'
 
@@ -47,6 +56,8 @@ const isAccessibleAdminCourse = (course: Course) => !course.deletedAt
 
 const sortCoursesByTitle = (courses: Course[]) =>
   [...courses].sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'))
+
+const toTimestamp = () => new Date().toISOString()
 
 const toTimestampNumber = (timestamp: string | null | undefined) => {
   if (!timestamp) {
@@ -282,6 +293,23 @@ const getModuleProgress = (module: CourseModule, lessons: Lesson[], lessonProgre
   }
 }
 
+const buildModuleDetailLessons = (
+  module: CourseModule,
+  lessons: Lesson[],
+  lessonProgressList: LessonProgress[]
+): ModuleDetailLesson[] => {
+  const completedLessonIds = new Set(
+    lessonProgressList
+      .filter((lessonProgress) => lessonProgress.moduleId === module.id && isLessonProgressCompleted(lessonProgress))
+      .map((lessonProgress) => lessonProgress.lessonId)
+  )
+
+  return listModuleLessons(module, lessons).map((lesson) => ({
+    ...lesson,
+    isCompleted: completedLessonIds.has(lesson.id)
+  }))
+}
+
 const listStudentCourses = async (userId: string) => {
   const enrollmentSnapshot = await getFirebaseAdminCollection('enrollments').where('userId', '==', userId).get()
   const courseIds = [...new Set(
@@ -376,14 +404,82 @@ export const getAccessibleModuleDetailBySlugs = async (
   }
 
   const courseLessons = await listCourseLessons(courseDetail.course)
-  const lessons = listModuleLessons(module, courseLessons)
-  const assessments = await listModuleAssessments(module)
   const courseLessonProgress = await listCourseLessonProgress(session.user.id, courseDetail.course.id)
+  const lessons = buildModuleDetailLessons(module, courseLessons, courseLessonProgress)
+  const assessments = await listModuleAssessments(module)
 
   return {
     module,
     lessons,
     assessment: assessments[0] || null,
     progress: getModuleProgress(module, courseLessons, courseLessonProgress)
+  }
+}
+
+export const markLessonAsCompletedBySlugs = async (
+  session: AuthSessionContext,
+  courseSlug: string,
+  moduleSlug: string,
+  lessonSlug: string
+) => {
+  if (!lessonSlug.trim()) {
+    throw createHttpError(400, 'Informe um slug de aula valido.')
+  }
+
+  const moduleDetail = await getAccessibleModuleDetailBySlugs(session, courseSlug, moduleSlug)
+  const lesson = moduleDetail.lessons.find((moduleLesson) => moduleLesson.slug === lessonSlug.trim())
+
+  if (!lesson) {
+    throw createHttpError(404, 'Aula nao encontrada.')
+  }
+
+  if (lesson.isCompleted) {
+    return {
+      lessonId: lesson.id,
+      isCompleted: true as const
+    }
+  }
+
+  const now = toTimestamp()
+  const existingLessonProgress = (
+    await listCourseLessonProgress(session.user.id, moduleDetail.module.courseId)
+  ).find(
+    (lessonProgress) =>
+      lessonProgress.moduleId === moduleDetail.module.id && lessonProgress.lessonId === lesson.id && !lessonProgress.deletedAt
+  )
+
+  const baseLessonProgressPayload = {
+    userId: session.user.id,
+    courseId: moduleDetail.module.courseId,
+    moduleId: moduleDetail.module.id,
+    lessonId: lesson.id,
+    watchedMinutes: Math.max(existingLessonProgress?.watchedMinutes || 0, lesson.durationInMinutes),
+    completionRate: 100,
+    lastPositionInSeconds: Math.max(existingLessonProgress?.lastPositionInSeconds || 0, lesson.durationInMinutes * 60),
+    markedAsCompleted: true,
+    completedAt: existingLessonProgress?.completedAt || now,
+    updatedAt: now,
+    updatedBy: session.user.id,
+    deletedAt: null,
+    deletedBy: null
+  }
+
+  if (existingLessonProgress) {
+    await getFirebaseAdminCollection('lessonProgress').doc(existingLessonProgress.id).set(baseLessonProgressPayload, {
+      merge: true
+    })
+  } else {
+    await getFirebaseAdminCollection('lessonProgress')
+      .doc(`${session.user.id}_${lesson.id}`)
+      .set({
+        ...baseLessonProgressPayload,
+        createdAt: now,
+        createdBy: session.user.id
+      })
+  }
+
+  return {
+    lessonId: lesson.id,
+    isCompleted: true as const
   }
 }
