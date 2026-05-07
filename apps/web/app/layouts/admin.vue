@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import BrandMark from '../components/base/BrandMark.vue'
 import UiButton from '../components/ui/UiButton.vue'
+import UiConfirmationModal from '../components/ui/UiConfirmationModal.vue'
+import { useConfirmationModal } from '../composables/use-confirmation-modal'
 import { useAuthSession } from '../composables/use-auth-session'
 
 const { user, clearUser } = useAuthSession()
+const { openConfirmationModal } = useConfirmationModal()
 const isLoggingOut = ref(false)
 
 const menu = [
@@ -32,6 +35,30 @@ const onLogout = async () => {
     await navigateTo('/login')
   }
 }
+
+const onRequestLogout = () => {
+  if (isLoggingOut.value) {
+    return
+  }
+
+  openConfirmationModal({
+    title: 'Confirmar saida',
+    message: 'Deseja realmente sair do painel administrativo?',
+    actions: [
+      {
+        id: 'cancel',
+        label: 'Cancelar',
+        variant: 'secondary'
+      },
+      {
+        id: 'confirm',
+        label: 'Sair',
+        errorMessage: 'Nao foi possivel concluir a saida do painel.',
+        onClick: onLogout
+      }
+    ]
+  })
+}
 </script>
 
 <template>
@@ -47,7 +74,7 @@ const onLogout = async () => {
           {{ item.label }}
         </NuxtLink>
       </nav>
-      <UiButton type="button" variant="secondary" size="sm" :disabled="isLoggingOut" @click="onLogout">
+      <UiButton type="button" variant="secondary" size="sm" :disabled="isLoggingOut" @click="onRequestLogout">
         {{ isLoggingOut ? 'Saindo...' : 'Sair' }}
       </UiButton>
     </aside>
@@ -55,6 +82,8 @@ const onLogout = async () => {
     <main class="admin-content">
       <slot />
     </main>
+
+    <UiConfirmationModal />
   </div>
 </template>
 

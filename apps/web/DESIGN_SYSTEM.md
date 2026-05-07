@@ -37,14 +37,16 @@ Este projeto adota um design system inspirado na linguagem visual da Netflix: fu
 Sempre reutilizar estes componentes antes de criar variacoes novas:
 
 - `UiPanel`: superficie padrao para cards, hero sections, sidebars e blocos.
-- `UiButton`: CTA primario, secundario e ghost.
+- `UiButton`: CTA primario, secundario, ghost e success.
 - `UiField`: wrapper oficial para label, hint e erro.
 - `UiInput`: input padrao.
 - `UiSelect`: select padrao.
 - `UiTextarea`: textarea padrao.
 - `UiSpinner`: indicador de carregamento reutilizavel para estados async.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
+- `UiConfirmationModal`: modal global de confirmacao para acoes sensiveis.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
+- `LessonVideoPlayer`: player reutilizavel para aulas em video com suporte a HLS.
 - `AppFooter`, `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
 
 ## Marca e assets
@@ -65,6 +67,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Toda nova tela deve partir de fundo escuro. Nao usar paginas claras como padrao.
 - Toda acao principal deve usar `UiButton` com `variant="primary"`.
 - Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
+- Toda acao positiva de confirmacao ou sucesso pode usar `UiButton` com `variant="success"` quando o verde comunicar melhor que o vermelho.
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.
@@ -98,12 +101,28 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - O visual deve manter contraste alto com acento vermelho, sem fugir da linguagem dark cinematografica.
 - Sempre manter rotulo acessivel via `aria-label`, com opcao de texto visivel ao lado quando fizer sentido.
 
+## Modal de confirmacao
+
+- `UiConfirmationModal` e o padrao oficial para confirmar exclusoes, saidas e outras acoes sensiveis.
+- O componente deve ser montado uma unica vez no layout que precisa oferecer esse recurso.
+- A abertura, o fechamento, o titulo, a mensagem e as acoes do modal devem ser controlados exclusivamente por `useConfirmationModal`.
+- Paginas e componentes consumidores nao devem renderizar instancias extras do modal localmente.
+
 ## Grid de cursos
 
 - `CourseGrid` e o padrao oficial para vitrines de cursos em formato de cards.
 - Cada card deve exibir capa, titulo, descricao curta, slug e meta resumida do curso.
 - O hover da capa deve ampliar somente a imagem interna, sem aumentar o tamanho externo do card.
 - Quando `coverImageUrl` estiver ausente, usar o fallback `app/assets/img/logos/videira-logo.svg`.
+
+## Player de aula
+
+- `LessonVideoPlayer` e o padrao oficial para reproducao de aulas em video.
+- O componente deve encapsular a integracao com `hls.js`, mantendo a pagina consumidora responsavel apenas por dados e eventos.
+- O componente deve suportar links `m3u8`, YouTube e Vimeo usando `Plyr` como UI principal.
+- Links de YouTube e Vimeo devem ser normalizados automaticamente quando chegarem fora do formato embed.
+- O player deve aceitar um ponto inicial de reproducao para retomar o video de onde o aluno parou.
+- Eventos de progresso devem permitir persistir o ponto atual e o estado de conclusao da aula.
 
 ## Footer compartilhado
 

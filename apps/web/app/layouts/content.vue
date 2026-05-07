@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import AppFooter from '../components/base/AppFooter.vue'
 import BrandMark from '../components/base/BrandMark.vue'
+import UiConfirmationModal from '../components/ui/UiConfirmationModal.vue'
 import UiDropdownMenu from '../components/ui/UiDropdownMenu.vue'
+import { useConfirmationModal } from '../composables/use-confirmation-modal'
 import { useAuthSession } from '../composables/use-auth-session'
 
 const { user, clearUser } = useAuthSession()
+const { openConfirmationModal } = useConfirmationModal()
 const isLoggingOut = ref(false)
 
 const links = [
@@ -44,7 +47,23 @@ const onAccountMenuSelect = async (itemId: string) => {
     return
   }
 
-  await onLogout()
+  openConfirmationModal({
+    title: 'Confirmar saida',
+    message: 'Deseja realmente sair da plataforma neste dispositivo?',
+    actions: [
+      {
+        id: 'cancel',
+        label: 'Cancelar',
+        variant: 'secondary'
+      },
+      {
+        id: 'confirm',
+        label: 'Sair',
+        errorMessage: 'Nao foi possivel concluir a saida da plataforma.',
+        onClick: onLogout
+      }
+    ]
+  })
 }
 </script>
 
@@ -78,6 +97,7 @@ const onAccountMenuSelect = async (itemId: string) => {
     </main>
 
     <AppFooter brand-to="/home" />
+    <UiConfirmationModal />
   </div>
 </template>
 

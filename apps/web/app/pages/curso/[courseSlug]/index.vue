@@ -46,6 +46,7 @@ const modules = computed(() => {
     id: module.id,
     title: module.title,
     description: module.description,
+    lessonCountLabel: module.lessonIds.length === 1 ? '1 aula' : `${module.lessonIds.length} aulas`,
     href: `/curso/${courseSlug.value}/modulo/${module.slug}`
   }))
 })
@@ -72,6 +73,14 @@ const courseErrorMessage = computed(() => {
   }
 
   return courseDetailResponse.value.messages[0] || 'Nao foi possivel carregar o curso.'
+})
+
+const modulesInfoTitle = computed(() => {
+  if (!course.value) {
+    return 'Módulos'
+  }
+
+  return `${course.value.moduleIds.length} módulos neste curso`
 })
 
 useSeoMeta({
@@ -104,7 +113,7 @@ useSeoMeta({
 
     <PageIntro
       eyebrow="Módulos"
-      title=""
+      :title="modulesInfoTitle"
       description="Confira os módulos disponíveis para este curso."
     />
 
@@ -113,6 +122,7 @@ useSeoMeta({
         <div class="section-stack module-card-content">
           <h2 class="section-title">{{ module.title }}</h2>
           <p class="body-copy module-description">{{ module.description }}</p>
+          <p class="module-meta">{{ module.lessonCountLabel }}</p>
           <NuxtLink :to="module.href" class="button-secondary module-link">Abrir modulo</NuxtLink>
         </div>
       </SurfaceCard>
@@ -156,6 +166,12 @@ useSeoMeta({
 .module-link {
   margin-top: auto;
   align-self: flex-start;
+}
+
+.module-meta {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 @media (min-width: 700px) {

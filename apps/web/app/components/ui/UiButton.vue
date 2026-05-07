@@ -10,7 +10,7 @@ const props = withDefaults(
     to?: string
     href?: string
     type?: 'button' | 'submit' | 'reset'
-    variant?: 'primary' | 'secondary' | 'ghost'
+    variant?: 'primary' | 'secondary' | 'ghost' | 'success'
     size?: 'sm' | 'md' | 'lg'
     block?: boolean
     disabled?: boolean
@@ -47,6 +47,10 @@ const variantClass = computed(() => {
 
   if (props.variant === 'ghost') {
     return 'border-transparent bg-transparent text-white/78 hover:bg-white/7 hover:text-white focus-visible:ring-white/10'
+  }
+
+  if (props.variant === 'success') {
+    return 'border-[color:var(--ds-success)] bg-[linear-gradient(180deg,#5ae07c_0%,#2ca74d_100%)] text-[#06110a] shadow-[0_14px_30px_rgba(70,211,105,0.24)] hover:-translate-y-0.5 hover:brightness-110 focus-visible:ring-[rgba(70,211,105,0.24)]'
   }
 
   return 'border-[color:var(--ds-accent)] bg-[linear-gradient(180deg,#ff2d2d_0%,#b20710_100%)] text-white shadow-[0_14px_30px_rgba(229,9,20,0.28)] hover:-translate-y-0.5 hover:brightness-110 focus-visible:ring-[rgba(229,9,20,0.2)]'

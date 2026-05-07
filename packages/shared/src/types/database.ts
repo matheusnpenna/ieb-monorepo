@@ -99,6 +99,14 @@ export interface Lesson extends AuditedDocument {
   allowManualCompletion: boolean
 }
 
+export interface LessonComment extends AuditedDocument {
+  userId: string
+  courseId: string
+  moduleId: string
+  lessonId: string
+  content: string
+}
+
 export interface AssessmentQuestionOption {
   id: string
   label: string
@@ -201,6 +209,7 @@ export type FirestoreCollections =
   | 'courses'
   | 'modules'
   | 'lessons'
+  | 'lessonComments'
   | 'assessments'
   | 'enrollments'
   | 'lessonProgress'
