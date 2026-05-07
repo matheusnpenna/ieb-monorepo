@@ -106,7 +106,7 @@ textarea {
   margin: 0;
   font-family: 'Fraunces', serif;
   font-size: clamp(1.3rem, 2.2vw, 2.2rem);
-  line-height: 1.02;
+  line-height: 0;
   letter-spacing: -0.03em;
   color: var(--ds-text);
 }
