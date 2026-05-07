@@ -10,9 +10,12 @@ export default defineEventHandler(async (event): Promise<LessonProgressUpdateRes
     const moduleSlug = String(event.context.params?.moduleSlug ?? '')
     const lessonSlug = String(event.context.params?.lessonSlug ?? '')
     const body = await readBody<{ lastPositionInSeconds?: number; markAsCompleted?: boolean }>(event)
+    const hasCompletionOverride =
+      typeof body === 'object' && body !== null && Object.prototype.hasOwnProperty.call(body, 'markAsCompleted')
     const progress = await updateLessonProgressBySlugs(session, courseSlug, moduleSlug, lessonSlug, {
       lastPositionInSeconds: typeof body?.lastPositionInSeconds === 'number' ? body.lastPositionInSeconds : 0,
-      markAsCompleted: Boolean(body?.markAsCompleted)
+      markAsCompleted: Boolean(body?.markAsCompleted),
+      hasCompletionOverride
     })
 
     return {

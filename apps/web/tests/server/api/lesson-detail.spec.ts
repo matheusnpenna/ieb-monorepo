@@ -169,7 +169,8 @@ describe('lesson detail api', () => {
       'introducao',
       {
         lastPositionInSeconds: 312,
-        markAsCompleted: false
+        markAsCompleted: false,
+        hasCompletionOverride: true
       }
     )
     expect(response).toEqual({

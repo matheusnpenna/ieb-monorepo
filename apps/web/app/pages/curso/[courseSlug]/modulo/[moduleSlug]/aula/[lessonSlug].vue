@@ -5,8 +5,9 @@ import type {
   LessonProgressUpdateResponse
 } from '@ieb/shared'
 import LessonCommentsPanel from '../../../../../../components/content/LessonCommentsPanel.vue'
+import LessonCompletionToggle from '../../../../../../components/content/LessonCompletionToggle.vue'
+import LessonNavigationControls from '../../../../../../components/content/LessonNavigationControls.vue'
 import SurfaceCard from '../../../../../../components/base/SurfaceCard.vue'
-import UiButton from '../../../../../../components/ui/UiButton.vue'
 import UiSpinner from '../../../../../../components/ui/UiSpinner.vue'
 import LessonVideoPlayer from '../../../../../../components/content/LessonVideoPlayer.vue'
 import { getRequestErrorMessage } from '../../../../../../lib/utils'
@@ -77,16 +78,6 @@ watch(
 const isSavingProgress = ref(false)
 const queuedProgressPayload = ref<{ lastPositionInSeconds: number; markAsCompleted: boolean } | null>(null)
 const progressErrorMessage = ref('')
-const isCompletingLesson = ref(false)
-
-const previousLessonHref = computed(() => lessonDetail.value?.previousLesson?.href || null)
-const nextLessonHref = computed(() => lessonDetail.value?.nextLesson?.href || null)
-
-const isLessonCompleted = computed(() => lessonProgressState.value?.isCompleted || false)
-
-const completeLessonButtonLabel = computed(() =>
-  isLessonCompleted.value ? 'Aula concluida' : 'Marcar como concluida'
-)
 
 const persistLessonProgress = async (payload: { lastPositionInSeconds: number; markAsCompleted: boolean }) => {
   const response = await $fetch<LessonProgressUpdateResponse>(
@@ -154,24 +145,9 @@ const onVideoProgress = async (payload: PlayerProgressPayload) => {
   })
 }
 
-const markLessonAsCompleted = async () => {
-  if (!lesson.value || isLessonCompleted.value || isCompletingLesson.value) {
-    return
-  }
-
+const onLessonCompletionUpdated = (progress: LessonDetailProgress) => {
+  lessonProgressState.value = { ...progress }
   progressErrorMessage.value = ''
-  isCompletingLesson.value = true
-
-  try {
-    await persistLessonProgress({
-      lastPositionInSeconds: Math.max(lessonProgressState.value?.lastPositionInSeconds || 0, lesson.value.durationInMinutes * 60),
-      markAsCompleted: true
-    })
-  } catch (error) {
-    progressErrorMessage.value = getRequestErrorMessage(error, 'Nao foi possivel concluir a aula.')
-  } finally {
-    isCompletingLesson.value = false
-  }
 }
 
 useSeoMeta({
@@ -194,42 +170,19 @@ useSeoMeta({
         </p>
         <p v-else-if="lessonErrorMessage" class="body-copy">{{ lessonErrorMessage }}</p>
         <template v-else>
-          <div class="lesson-completion-row">
-            <UiButton
-              :disabled="!lesson || isLessonCompleted || isCompletingLesson"
-              :loading="isCompletingLesson"
-              :variant="isLessonCompleted ? 'secondary' : 'primary'"
-              size="lg"
-              @click="markLessonAsCompleted"
-            >
-              <svg v-if="isLessonCompleted" class="button-icon" viewBox="0 0 20 20" aria-hidden="true">
-                <circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" stroke-width="1.7" />
-                <path
-                  d="M6.8 10.1l2.1 2.2 4.4-4.7"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.7"
-                />
-              </svg>
-              <svg v-else class="button-icon" viewBox="0 0 20 20" aria-hidden="true">
-                <circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" stroke-width="1.7" />
-                <path
-                  d="M10 6.3v7.4M6.3 10h7.4"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-width="1.7"
-                />
-              </svg>
-              {{ completeLessonButtonLabel }}
-            </UiButton>
-          </div>
-
           <p v-if="progressErrorMessage" class="completion-feedback">
             {{ progressErrorMessage }}
           </p>
+
+          <LessonCompletionToggle
+            v-if="lesson"
+            :course-slug="courseSlug"
+            :module-slug="moduleSlug"
+            :lesson-slug="lessonSlug"
+            :lesson-duration-in-minutes="lesson.durationInMinutes"
+            :progress="lessonProgressState"
+            @updated="onLessonCompletionUpdated"
+          />
 
           <LessonVideoPlayer
             :src="lessonDetail?.videoUrl || null"
@@ -239,43 +192,10 @@ useSeoMeta({
             @progress="onVideoProgress"
           />
 
-          <div class="lesson-navigation">
-            <UiButton
-              :to="previousLessonHref || undefined"
-              :disabled="!previousLessonHref"
-              variant="secondary"
-              size="lg"
-            >
-              <svg class="button-icon" viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M9.5 3.5L5 8l4.5 4.5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.6"
-                />
-              </svg>
-              Anterior
-            </UiButton>
-            <UiButton
-              :to="nextLessonHref || undefined"
-              :disabled="!nextLessonHref"
-              size="lg"
-            >
-              Proximo
-              <svg class="button-icon" viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M6.5 3.5L11 8l-4.5 4.5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.6"
-                />
-              </svg>
-            </UiButton>
-          </div>
+          <LessonNavigationControls
+            :previous-lesson="lessonDetail?.previousLesson || null"
+            :next-lesson="lessonDetail?.nextLesson || null"
+          />
         </template>
       </div>
     </SurfaceCard>
@@ -312,31 +232,8 @@ useSeoMeta({
   color: var(--color-muted);
 }
 
-.lesson-completion-row {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .completion-feedback {
   color: #ff9d9d;
-}
-
-.lesson-navigation,
-.comments-actions,
-.comment-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.lesson-navigation {
-  justify-content: space-between;
-}
-
-.button-icon {
-  width: 1rem;
-  height: 1rem;
-  flex: none;
 }
 
 .lesson-meta {
@@ -348,16 +245,5 @@ useSeoMeta({
 .lesson-body {
   color: var(--color-text);
   line-height: 1.75;
-}
-
-@media (max-width: 720px) {
-  .lesson-navigation {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .lesson-completion-row {
-    justify-content: stretch;
-  }
 }
 </style>

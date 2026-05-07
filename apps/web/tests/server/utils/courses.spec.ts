@@ -1096,6 +1096,137 @@ describe('getAccessibleLessonDetailBySlugs', () => {
     expect(detail.previousLesson?.slug).toBe('aula-01')
     expect(detail.nextLesson?.slug).toBe('aula-03')
   })
+
+  it('navigates across module boundaries when the current lesson is at the edge of a module', async () => {
+    const course = buildCourse({
+      id: 'curso-de-teologia-basica',
+      title: 'Curso de Teologia Basica',
+      slug: 'curso-de-teologia-basica',
+      moduleIds: ['modulo-01', 'modulo-02']
+    })
+    const firstModule = buildModule({
+      id: 'modulo-01',
+      courseId: course.id,
+      title: 'Modulo 01',
+      slug: 'fundamentos',
+      lessonIds: ['aula-01', 'aula-02']
+    })
+    const secondModule = buildModule({
+      id: 'modulo-02',
+      courseId: course.id,
+      title: 'Modulo 02',
+      slug: 'aprofundamento',
+      lessonIds: ['aula-03']
+    })
+    const lessonOne = buildLesson({
+      id: 'aula-01',
+      courseId: course.id,
+      moduleId: firstModule.id,
+      title: 'Aula 01',
+      slug: 'aula-01'
+    })
+    const lessonTwo = buildLesson({
+      id: 'aula-02',
+      courseId: course.id,
+      moduleId: firstModule.id,
+      title: 'Aula 02',
+      slug: 'aula-02'
+    })
+    const lessonThree = buildLesson({
+      id: 'aula-03',
+      courseId: course.id,
+      moduleId: secondModule.id,
+      title: 'Aula 03',
+      slug: 'aula-03'
+    })
+
+    const coursesCollection = {
+      doc: vi.fn(() => ({
+        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
+      }))
+    }
+    const enrollmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [{ data: () => buildEnrollment({ id: 'enrollment-1', userId: 'student-1', courseId: course.id }) }]
+        })
+      })
+    }
+    const modulesCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [createDocumentSnapshot(firstModule), createDocumentSnapshot(secondModule)]
+        })
+      })
+    }
+    const lessonsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [createDocumentSnapshot(lessonOne), createDocumentSnapshot(lessonTwo), createDocumentSnapshot(lessonThree)]
+        })
+      })
+    }
+    const lessonProgressCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: []
+        })
+      })
+    }
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') return coursesCollection
+      if (collectionName === 'enrollments') return enrollmentsCollection
+      if (collectionName === 'modules') return modulesCollection
+      if (collectionName === 'lessons') return lessonsCollection
+      if (collectionName === 'lessonProgress') return lessonProgressCollection
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const firstLessonDetail = await getAccessibleLessonDetailBySlugs(
+      {
+        user: {
+          id: 'student-1',
+          email: 'student@example.com',
+          fullName: 'Student One',
+          role: 'student',
+          status: 'active',
+          region: 'feira-de-santana',
+          avatarUrl: null
+        },
+        issuedAt: '2026-05-07T00:00:00.000Z'
+      },
+      course.slug,
+      firstModule.slug,
+      lessonOne.slug
+    )
+
+    expect(firstLessonDetail.previousLesson).toBeNull()
+    expect(firstLessonDetail.nextLesson?.href).toBe('/curso/curso-de-teologia-basica/modulo/fundamentos/aula/aula-02')
+
+    const boundaryLessonDetail = await getAccessibleLessonDetailBySlugs(
+      {
+        user: {
+          id: 'student-1',
+          email: 'student@example.com',
+          fullName: 'Student One',
+          role: 'student',
+          status: 'active',
+          region: 'feira-de-santana',
+          avatarUrl: null
+        },
+        issuedAt: '2026-05-07T00:00:00.000Z'
+      },
+      course.slug,
+      firstModule.slug,
+      lessonTwo.slug
+    )
+
+    expect(boundaryLessonDetail.previousLesson?.href).toBe('/curso/curso-de-teologia-basica/modulo/fundamentos/aula/aula-01')
+    expect(boundaryLessonDetail.nextLesson?.href).toBe(
+      '/curso/curso-de-teologia-basica/modulo/aprofundamento/aula/aula-03'
+    )
+  })
 })
 
 describe('updateLessonProgressBySlugs', () => {
@@ -1213,6 +1344,126 @@ describe('updateLessonProgressBySlugs', () => {
         watchedMinutes: 8,
         completionRate: 75,
         markedAsCompleted: false
+      }),
+      { merge: true }
+    )
+  })
+
+  it('allows unmarking an already completed lesson', async () => {
+    const course = buildCourse({
+      id: 'curso-de-teologia-basica',
+      title: 'Curso de Teologia Basica',
+      slug: 'curso-de-teologia-basica',
+      moduleIds: ['modulo-01']
+    })
+    const module = buildModule({
+      id: 'modulo-01',
+      courseId: course.id,
+      title: 'Modulo 01',
+      slug: 'fundamentos',
+      lessonIds: ['aula-01']
+    })
+    const lesson = buildLesson({
+      id: 'aula-01',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Aula 01',
+      slug: 'introducao',
+      durationInMinutes: 10
+    })
+    const existingProgress = buildLessonProgress({
+      id: 'lesson-progress-1',
+      userId: 'student-1',
+      courseId: course.id,
+      moduleId: module.id,
+      lessonId: lesson.id,
+      watchedMinutes: 10,
+      lastPositionInSeconds: 600,
+      completionRate: 100,
+      markedAsCompleted: true,
+      completedAt: '2026-05-07T00:00:00.000Z'
+    })
+
+    const coursesCollection = {
+      doc: vi.fn(() => ({ get: vi.fn().mockResolvedValue(createDocumentSnapshot(course)) }))
+    }
+    const enrollmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({
+          docs: [{ data: () => buildEnrollment({ id: 'enrollment-1', userId: 'student-1', courseId: course.id }) }]
+        })
+      })
+    }
+    const modulesCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(module)] })
+      })
+    }
+    const lessonsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(lesson)] })
+      })
+    }
+    const assessmentsCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({ docs: [] })
+      })
+    }
+    const lessonProgressDocSet = vi.fn().mockResolvedValue(undefined)
+    const lessonProgressCollection = {
+      where: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(existingProgress)] })
+      }),
+      doc: vi.fn(() => ({ set: lessonProgressDocSet }))
+    }
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') return coursesCollection
+      if (collectionName === 'enrollments') return enrollmentsCollection
+      if (collectionName === 'modules') return modulesCollection
+      if (collectionName === 'lessons') return lessonsCollection
+      if (collectionName === 'assessments') return assessmentsCollection
+      if (collectionName === 'lessonProgress') return lessonProgressCollection
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const progress = await updateLessonProgressBySlugs(
+      {
+        user: {
+          id: 'student-1',
+          email: 'student@example.com',
+          fullName: 'Student One',
+          role: 'student',
+          status: 'active',
+          region: 'feira-de-santana',
+          avatarUrl: null
+        },
+        issuedAt: '2026-05-07T00:00:00.000Z'
+      },
+      course.slug,
+      module.slug,
+      lesson.slug,
+      {
+        lastPositionInSeconds: 600,
+        markAsCompleted: false,
+        hasCompletionOverride: true
+      }
+    )
+
+    expect(progress).toEqual({
+      lessonId: lesson.id,
+      lastPositionInSeconds: 600,
+      watchedMinutes: 10,
+      completionRate: 99,
+      isCompleted: false
+    })
+    expect(lessonProgressDocSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lastPositionInSeconds: 600,
+        watchedMinutes: 10,
+        completionRate: 99,
+        markedAsCompleted: false,
+        completedAt: null
       }),
       { merge: true }
     )

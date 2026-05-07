@@ -339,17 +339,37 @@ const buildLessonDetailProgress = (
 const buildLessonNavigationHref = (courseSlug: string, moduleSlug: string, lessonSlug: string) =>
   `/curso/${courseSlug}/modulo/${moduleSlug}/aula/${lessonSlug}`
 
-const buildLessonNavigationItem = (courseSlug: string, moduleSlug: string, lesson: Lesson | null) => {
-  if (!lesson) {
+const buildLessonNavigationItem = (
+  courseSlug: string,
+  lessonReference: { module: CourseModule; lesson: Lesson } | null
+) => {
+  if (!lessonReference) {
     return null
   }
 
   return {
-    id: lesson.id,
-    title: lesson.title,
-    slug: lesson.slug,
-    href: buildLessonNavigationHref(courseSlug, moduleSlug, lesson.slug)
+    id: lessonReference.lesson.id,
+    title: lessonReference.lesson.title,
+    slug: lessonReference.lesson.slug,
+    href: buildLessonNavigationHref(courseSlug, lessonReference.module.slug, lessonReference.lesson.slug)
   }
+}
+
+const buildOrderedCourseLessonReferences = (modules: CourseModule[], lessons: Lesson[]) => {
+  const lessonsByModuleId = new Map<string, Lesson[]>()
+
+  for (const lesson of lessons) {
+    const existingLessons = lessonsByModuleId.get(lesson.moduleId) || []
+    existingLessons.push(lesson)
+    lessonsByModuleId.set(lesson.moduleId, existingLessons)
+  }
+
+  return modules.flatMap((module) =>
+    sortModuleLessons(module, lessonsByModuleId.get(module.id) || []).map((lesson) => ({
+      module,
+      lesson
+    }))
+  )
 }
 
 const listUsersByIds = async (userIds: string[]) => {
@@ -523,27 +543,46 @@ export const getAccessibleLessonDetailBySlugs = async (
     throw createHttpError(400, 'Informe um slug de aula valido.')
   }
 
-  const moduleDetail = await getAccessibleModuleDetailBySlugs(session, courseSlug, moduleSlug)
-  const currentLessonIndex = moduleDetail.lessons.findIndex((lesson) => lesson.slug === lessonSlug.trim())
+  const courseDetail = await getAccessibleCourseDetailBySlug(session, courseSlug)
+  const module = courseDetail.modules.find((courseModule) => courseModule.slug === moduleSlug.trim())
+
+  if (!module) {
+    throw createHttpError(404, 'Modulo nao encontrado.')
+  }
+
+  const courseLessons = await listCourseLessons(courseDetail.course)
+  const courseLessonProgress = await listCourseLessonProgress(session.user.id, courseDetail.course.id)
+  const moduleLessons = buildModuleDetailLessons(module, courseLessons, courseLessonProgress)
+  const currentLessonIndex = moduleLessons.findIndex((lesson) => lesson.slug === lessonSlug.trim())
 
   if (currentLessonIndex < 0) {
     throw createHttpError(404, 'Aula nao encontrada.')
   }
 
-  const lesson = moduleDetail.lessons[currentLessonIndex]!
-  const previousLesson = moduleDetail.lessons[currentLessonIndex - 1] || null
-  const nextLesson = moduleDetail.lessons[currentLessonIndex + 1] || null
-  const progress = buildLessonDetailProgress(lesson, (
-    await listCourseLessonProgress(session.user.id, moduleDetail.module.courseId)
-  ).filter((lessonProgress) => lessonProgress.moduleId === moduleDetail.module.id))
+  const lesson = moduleLessons[currentLessonIndex]!
+  const orderedCourseLessonReferences = buildOrderedCourseLessonReferences(courseDetail.modules, courseLessons)
+  const currentCourseLessonIndex = orderedCourseLessonReferences.findIndex(
+    (lessonReference) => lessonReference.module.id === module.id && lessonReference.lesson.id === lesson.id
+  )
+
+  if (currentCourseLessonIndex < 0) {
+    throw createHttpError(404, 'Aula nao encontrada.')
+  }
+
+  const previousLesson = orderedCourseLessonReferences[currentCourseLessonIndex - 1] || null
+  const nextLesson = orderedCourseLessonReferences[currentCourseLessonIndex + 1] || null
+  const progress = buildLessonDetailProgress(
+    lesson,
+    courseLessonProgress.filter((lessonProgress) => lessonProgress.moduleId === module.id)
+  )
 
   return {
     lesson,
-    module: moduleDetail.module,
+    module,
     videoUrl: lesson.mediaUrl,
     progress,
-    previousLesson: buildLessonNavigationItem(courseSlug, moduleSlug, previousLesson),
-    nextLesson: buildLessonNavigationItem(courseSlug, moduleSlug, nextLesson)
+    previousLesson: buildLessonNavigationItem(courseSlug, previousLesson),
+    nextLesson: buildLessonNavigationItem(courseSlug, nextLesson)
   }
 }
 
@@ -607,6 +646,7 @@ export const updateLessonProgressBySlugs = async (
   input: {
     lastPositionInSeconds?: number
     markAsCompleted?: boolean
+    hasCompletionOverride?: boolean
   }
 ): Promise<LessonProgressUpdateData> => {
   const lessonDetail = await getAccessibleLessonDetailBySlugs(session, courseSlug, moduleSlug, lessonSlug)
@@ -622,13 +662,24 @@ export const updateLessonProgressBySlugs = async (
     100,
     Math.max(existingLessonProgress?.completionRate || 0, Math.round((normalizedPosition / lessonDurationInSeconds) * 100))
   )
-  const shouldMarkAsCompleted = Boolean(input.markAsCompleted) || derivedCompletionRate >= 100
+  const hasCompletionOverride = Boolean(input.hasCompletionOverride)
+  const shouldMarkAsCompleted = hasCompletionOverride
+    ? Boolean(input.markAsCompleted)
+    : Boolean(existingLessonProgress && isLessonProgressCompleted(existingLessonProgress)) || derivedCompletionRate >= 100
+  const nextCompletionRate = hasCompletionOverride
+    ? shouldMarkAsCompleted
+      ? 100
+      : Math.min(99, derivedCompletionRate)
+    : shouldMarkAsCompleted
+      ? 100
+      : derivedCompletionRate
+
   const savedLessonProgress = await upsertLessonProgress(session, lesson, existingLessonProgress, {
     lastPositionInSeconds: normalizedPosition,
     watchedMinutes: nextWatchedMinutes,
-    completionRate: shouldMarkAsCompleted ? 100 : derivedCompletionRate,
+    completionRate: nextCompletionRate,
     markedAsCompleted: shouldMarkAsCompleted,
-    completedAt: shouldMarkAsCompleted ? existingLessonProgress?.completedAt || toTimestamp() : existingLessonProgress?.completedAt || null
+    completedAt: shouldMarkAsCompleted ? existingLessonProgress?.completedAt || toTimestamp() : null
   })
 
   return {
