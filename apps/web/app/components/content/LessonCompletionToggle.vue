@@ -20,8 +20,8 @@ const errorMessage = ref('')
 
 const isLessonCompleted = computed(() => props.progress?.isCompleted || false)
 const actionLabel = computed(() => (isLessonCompleted.value ? 'Desmarcar como concluida' : 'Marcar como concluida'))
-const buttonVariant = computed(() => (isLessonCompleted.value ? 'secondary' : 'primary'))
-
+const buttonVariant = computed(() => (isLessonCompleted.value ? 'success' : 'secondary'))
+ 
 const persistCompletionState = async (nextCompletionState: boolean) => {
   const response = await $fetch<LessonProgressUpdateResponse>(
     `/api/courses/${props.courseSlug}/modules/${props.moduleSlug}/lessons/${props.lessonSlug}/progress`,

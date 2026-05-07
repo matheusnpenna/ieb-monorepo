@@ -37,7 +37,7 @@ Este projeto adota um design system inspirado na linguagem visual da Netflix: fu
 Sempre reutilizar estes componentes antes de criar variacoes novas:
 
 - `UiPanel`: superficie padrao para cards, hero sections, sidebars e blocos.
-- `UiButton`: CTA primario, secundario e ghost.
+- `UiButton`: CTA primario, secundario, ghost e success.
 - `UiField`: wrapper oficial para label, hint e erro.
 - `UiInput`: input padrao.
 - `UiSelect`: select padrao.
@@ -67,6 +67,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Toda nova tela deve partir de fundo escuro. Nao usar paginas claras como padrao.
 - Toda acao principal deve usar `UiButton` com `variant="primary"`.
 - Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
+- Toda acao positiva de confirmacao ou sucesso pode usar `UiButton` com `variant="success"` quando o verde comunicar melhor que o vermelho.
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.
