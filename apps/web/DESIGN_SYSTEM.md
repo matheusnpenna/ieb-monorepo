@@ -42,6 +42,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiInput`: input padrao.
 - `UiSelect`: select padrao.
 - `UiTextarea`: textarea padrao.
+- `UiSpinner`: indicador de carregamento reutilizavel para estados async.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
 - `AppFooter`, `SurfaceCard`, `PageIntro` e `BrandMark`: blocos base ja alinhados ao sistema.
@@ -66,6 +67,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
+- Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.
 - Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.
 - Listagens principais de cursos na home ou vitrines semelhantes devem preferir `CourseGrid`.
 - O rodape compartilhado do site e da plataforma deve preferir `AppFooter`.
@@ -88,6 +90,13 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Quando nao houver `avatarUrl`, o fallback deve usar as duas primeiras iniciais do nome.
 - Se o nome tiver apenas uma palavra, o fallback deve usar somente a primeira letra.
 - O menu deve manter superficie escura elevada, foco visivel e estados de hover discretos com acento vermelho.
+
+## Loading spinner
+
+- `UiSpinner` e o padrao oficial para feedback visual de carregamento.
+- O componente deve ser reutilizavel em listas, acoes assíncronas e telas intermediarias.
+- O visual deve manter contraste alto com acento vermelho, sem fugir da linguagem dark cinematografica.
+- Sempre manter rotulo acessivel via `aria-label`, com opcao de texto visivel ao lado quando fizer sentido.
 
 ## Grid de cursos
 

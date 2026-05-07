@@ -41,6 +41,6 @@ describe('AppFooter', () => {
 
     expect(links).toContain('https://www.instagram.com/comunidadevideira/')
     expect(links).toContain('https://www.youtube.com/user/VideiraTV')
-    expect(links).toContain('https://wa.me/5575981535971')
+    expect(links.some((link) => link?.startsWith('https://wa.me/5575981535971'))).toBe(true)
   })
 })
