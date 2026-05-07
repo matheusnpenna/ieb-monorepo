@@ -105,6 +105,8 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Antes de criar tipos novos, verificar `packages/shared/src`.
 - Se um ajuste afeta dominio, auth, Firestore ou payloads de API, atualizar os tipos compartilhados junto com o consumo.
 - Evitar duplicar interfaces entre `apps/web` e `packages/shared`.
+- Cada curso deve ter `slug` unico.
+- O `slug` do curso deve ser usado como `id` do documento na collection de cursos do Firestore para otimizar acesso direto via `doc(id)`.
 
 ## Estrutura de testes
 
@@ -131,6 +133,8 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 - Fluxos e2e que dependem de autenticacao externa ou Firebase devem preferir `page.route(...)` para mockar as respostas HTTP quando o objetivo do teste for validar o comportamento do frontend e da navegacao.
 - Nao criar testes de componente Vue dentro de `apps/web/tests/server`.
 - Nao criar uma pasta centralizada para testes de componentes quando o teste puder ficar ao lado do proprio `.vue`.
+- Para testes dentro de `apps/web/tests/server/api`, nao repetir `endpoint`, `endpoints` ou termos equivalentes no nome do arquivo.
+- Nestes casos, o escopo do teste ja deve ser indicado pela propria pasta `api`, usando nomes como `courses.spec.ts`, `course-detail.spec.ts` e similares.
 
 ## Validacao minima
 

@@ -1,4 +1,4 @@
-import type { Course } from './database'
+import type { Course, CourseModule } from './database'
 
 export interface ApiSuccessResponse<T> {
   status: 'success'
@@ -15,3 +15,16 @@ export interface ApiErrorResponse<T> {
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse<T>
 
 export type CourseListResponse = ApiResponse<Course[]>
+
+export interface CourseDetailActionLinks {
+  startCourseHref: string | null
+  continueWatchingHref: string | null
+}
+
+export interface CourseDetailData {
+  course: Course
+  modules: CourseModule[]
+  actions: CourseDetailActionLinks
+}
+
+export type CourseDetailResponse = ApiResponse<CourseDetailData | null>
