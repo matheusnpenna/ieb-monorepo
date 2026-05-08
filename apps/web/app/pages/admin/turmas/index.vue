@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import PageIntro from '../../../components/base/PageIntro.vue'
-import SurfaceCard from '../../../components/base/SurfaceCard.vue'
+import AdminClassroomsListView from '../../../components/admin/AdminClassroomsListView.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -12,11 +11,5 @@ useSeoMeta({
 </script>
 
 <template>
-  <SurfaceCard>
-    <PageIntro
-      eyebrow="Turmas"
-      title="Gestao de turmas"
-      description="Espaco reservado para abertura de cadastro por UUID, vigencia e cursos vinculados."
-    />
-  </SurfaceCard>
+  <AdminClassroomsListView />
 </template>

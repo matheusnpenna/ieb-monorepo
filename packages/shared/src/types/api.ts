@@ -1,6 +1,7 @@
 import type {
   Assessment,
   AssessmentQuestionType,
+  Classroom,
   Course,
   CourseModule,
   CourseVisibility,
@@ -116,6 +117,19 @@ export interface AdminAssessmentInput {
 
 export type AdminAssessmentsResponse = ApiResponse<Assessment[]>
 export type AdminAssessmentResponse = ApiResponse<Assessment | null>
+
+export interface AdminClassroomInput {
+  name: string
+  uuid: string
+  description: string
+  registrationOpen: boolean
+  registrationStartsAt: string | null
+  registrationEndsAt: string | null
+  linkedCourseIds: string[]
+}
+
+export type AdminClassroomsResponse = ApiResponse<Classroom[]>
+export type AdminClassroomResponse = ApiResponse<Classroom | null>
 
 export interface AdminUploadedImageData {
   url: string
