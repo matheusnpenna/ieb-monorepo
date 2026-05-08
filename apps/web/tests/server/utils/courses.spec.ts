@@ -13,21 +13,26 @@ vi.mock('../../../server/utils/firebase-admin', () => ({
 
 import {
   createAdminCourse,
+  createAdminLesson,
   createAdminModule,
   deleteAdminCourseBySlug,
+  deleteAdminLessonBySlug,
   deleteAdminModuleBySlug,
   getAccessibleCourseDetailBySlug,
   getAccessibleModuleDetailBySlugs,
   getAccessibleLessonDetailBySlugs,
   getAdminCourseBySlug,
+  getAdminLessonBySlug,
   getAdminModuleBySlug,
   getHomeMetrics,
   listAccessibleCourses,
   listAdminCoursesForManagement,
+  listAdminLessonsForManagement,
   listAdminModulesForManagement,
   listLessonCommentsBySlugs,
   markLessonAsCompletedBySlugs,
   updateAdminCourseBySlug,
+  updateAdminLessonBySlug,
   updateAdminModuleBySlug,
   updateLessonProgressBySlugs,
   createLessonCommentBySlugs,
@@ -889,6 +894,295 @@ describe('admin module management', () => {
 
     expect(loadedModule.id).toBe('module-doc-1')
     expect(loadedModule.slug).toBe('fundamentos-da-fe')
+  })
+})
+
+describe('admin lesson management', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const adminSession = {
+    user: {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      fullName: 'Admin User',
+      role: 'admin' as const,
+      status: 'active' as const,
+      region: 'feira-de-santana' as const,
+      avatarUrl: null
+    },
+    issuedAt: '2026-05-08T00:00:00.000Z'
+  }
+
+  it('lists admin lessons for management ordered by course, module and order', async () => {
+    const lessonOne = buildLesson({
+      id: 'aula-b',
+      courseId: 'curso-1',
+      moduleId: 'modulo-1',
+      title: 'Aula B',
+      slug: 'aula-b',
+      order: 2
+    })
+    const lessonTwo = buildLesson({
+      id: 'aula-a',
+      courseId: 'curso-1',
+      moduleId: 'modulo-1',
+      title: 'Aula A',
+      slug: 'aula-a',
+      order: 1
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'lessons') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [createDocumentSnapshot(lessonOne), createDocumentSnapshot(lessonTwo)]
+          })
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const lessons = await listAdminLessonsForManagement(adminSession)
+
+    expect(lessons.map((lesson) => lesson.slug)).toEqual(['aula-a', 'aula-b'])
+  })
+
+  it('creates, updates, loads and soft deletes a lesson while syncing lesson order in the module', async () => {
+    const adminLogSet = vi.fn().mockResolvedValue(undefined)
+    const storedCourses = new Map<string, Course>()
+    const storedModules = new Map<string, CourseModule>()
+    const storedLessons = new Map<string, Lesson>()
+    const baseCourse = buildCourse({
+      id: 'teologia-basica',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica',
+      moduleIds: ['fundamentos-da-fe']
+    })
+    const baseModule = buildModule({
+      id: 'fundamentos-da-fe',
+      courseId: baseCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: 'fundamentos-da-fe',
+      lessonIds: []
+    })
+
+    storedCourses.set(baseCourse.id, baseCourse)
+    storedModules.set(baseModule.id, baseModule)
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedCourses.has(documentId)
+                ? createDocumentSnapshot(storedCourses.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingCourse = storedCourses.get(documentId)
+              const nextCourse =
+                options?.merge && existingCourse
+                  ? ({ ...existingCourse, ...(payload as Partial<Course>), id: documentId } as Course)
+                  : ({ ...(payload as Course), id: documentId } as Course)
+
+              storedCourses.set(documentId, nextCourse)
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedModules.has(documentId)
+                ? createDocumentSnapshot(storedModules.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingModule = storedModules.get(documentId)
+              const nextModule =
+                options?.merge && existingModule
+                  ? ({ ...existingModule, ...(payload as Partial<CourseModule>), id: documentId } as CourseModule)
+                  : ({ ...(existingModule || {}), ...(payload as Partial<CourseModule>), id: documentId } as CourseModule)
+
+              storedModules.set(documentId, nextModule)
+            })
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'courseId' && fieldValue === baseCourse.id
+                  ? [createDocumentSnapshot(baseModule)]
+                  : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'lessons') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedLessons.has(documentId)
+                ? createDocumentSnapshot(storedLessons.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingLesson = storedLessons.get(documentId)
+              const nextLesson =
+                options?.merge && existingLesson
+                  ? ({ ...existingLesson, ...(payload as Partial<Lesson>), id: documentId } as Lesson)
+                  : ({ ...(existingLesson || {}), ...(payload as Partial<Lesson>), id: documentId } as Lesson)
+
+              storedLessons.set(documentId, nextLesson)
+            })
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'courseId' && fieldValue === baseCourse.id
+                  ? [...storedLessons.values()]
+                      .filter((lesson) => lesson.courseId === baseCourse.id)
+                      .map(createDocumentSnapshot)
+                  : fieldName === 'slug'
+                    ? [...storedLessons.values()]
+                        .filter((lesson) => lesson.slug === fieldValue)
+                        .map(createDocumentSnapshot)
+                    : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'adminLogs') {
+        return {
+          doc: vi.fn(() => ({
+            id: 'log-1',
+            set: adminLogSet
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const createdLesson = await createAdminLesson(adminSession, {
+      courseId: baseCourse.id,
+      moduleId: baseModule.id,
+      title: 'Introducao a Teologia',
+      slug: 'introducao-a-teologia',
+      description: 'Panorama inicial da disciplina.',
+      order: 1,
+      contentType: 'video',
+      videoProvider: 'youtube',
+      mediaUrl: 'https://youtube.com/watch?v=123',
+      thumbnailUrl: null,
+      durationInMinutes: 18,
+      bodyContent: null,
+      allowManualCompletion: true
+    })
+
+    expect(createdLesson.slug).toBe('introducao-a-teologia')
+    expect(storedModules.get(baseModule.id)?.lessonIds).toEqual(['introducao-a-teologia'])
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'create',
+        targetCollection: 'lessons',
+        targetId: 'introducao-a-teologia'
+      })
+    )
+
+    const loadedLesson = await getAdminLessonBySlug(adminSession, 'introducao-a-teologia')
+    expect(loadedLesson.title).toBe('Introducao a Teologia')
+
+    const updatedLesson = await updateAdminLessonBySlug(adminSession, 'introducao-a-teologia', {
+      courseId: baseCourse.id,
+      moduleId: baseModule.id,
+      title: 'Introducao revisada',
+      slug: 'introducao-a-teologia',
+      description: 'Panorama revisado.',
+      order: 1,
+      contentType: 'video',
+      videoProvider: 'youtube',
+      mediaUrl: 'https://youtube.com/watch?v=123',
+      thumbnailUrl: null,
+      durationInMinutes: 22,
+      bodyContent: null,
+      allowManualCompletion: true
+    })
+
+    expect(updatedLesson.title).toBe('Introducao revisada')
+    expect(updatedLesson.durationInMinutes).toBe(22)
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'update',
+        targetCollection: 'lessons',
+        targetId: 'introducao-a-teologia'
+      })
+    )
+
+    const deletedLesson = await deleteAdminLessonBySlug(adminSession, 'introducao-a-teologia')
+
+    expect(deletedLesson.deletedAt).toBeTruthy()
+    expect(storedModules.get(baseModule.id)?.lessonIds).toEqual([])
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'delete',
+        targetCollection: 'lessons',
+        targetId: 'introducao-a-teologia'
+      })
+    )
+  })
+
+  it('loads a legacy lesson by slug even when the document id is different', async () => {
+    const legacyLesson = buildLesson({
+      id: 'lesson-doc-1',
+      courseId: 'teologia-basica',
+      moduleId: 'fundamentos-da-fe',
+      title: 'Introducao a Teologia',
+      slug: 'introducao-a-teologia'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'lessons') {
+        return {
+          doc: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ exists: false })
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'slug' && fieldValue === legacyLesson.slug
+                  ? [createDocumentSnapshot(legacyLesson)]
+                  : []
+            })
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const loadedLesson = await getAdminLessonBySlug(adminSession, 'introducao-a-teologia')
+
+    expect(loadedLesson.id).toBe('lesson-doc-1')
+    expect(loadedLesson.slug).toBe('introducao-a-teologia')
   })
 })
 

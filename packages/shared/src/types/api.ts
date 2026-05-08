@@ -1,4 +1,12 @@
-import type { Assessment, Course, CourseModule, CourseVisibility, Lesson } from './database'
+import type {
+  Assessment,
+  Course,
+  CourseModule,
+  CourseVisibility,
+  Lesson,
+  LessonContentType,
+  VideoProvider
+} from './database'
 
 export interface ApiSuccessResponse<T> {
   status: 'success'
@@ -60,6 +68,25 @@ export interface AdminModuleInput {
 
 export type AdminModulesResponse = ApiResponse<CourseModule[]>
 export type AdminModuleResponse = ApiResponse<CourseModule | null>
+
+export interface AdminLessonInput {
+  courseId: string
+  moduleId: string
+  title: string
+  slug: string
+  description: string
+  order: number
+  contentType: LessonContentType
+  videoProvider: VideoProvider | null
+  mediaUrl: string | null
+  thumbnailUrl: string | null
+  durationInMinutes: number
+  bodyContent: string | null
+  allowManualCompletion: boolean
+}
+
+export type AdminLessonsResponse = ApiResponse<Lesson[]>
+export type AdminLessonResponse = ApiResponse<Lesson | null>
 
 export interface AdminUploadedImageData {
   url: string

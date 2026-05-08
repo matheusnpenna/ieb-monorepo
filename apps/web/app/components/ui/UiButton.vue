@@ -47,7 +47,7 @@ const isDisabled = computed(() => props.disabled || props.loading)
 const isNuxtLink = computed(() => Boolean(props.to))
 const isAnchor = computed(() => !props.to && Boolean(props.href))
 const sharedClass = computed(() => [
-  'cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border font-semibold tracking-[0.01em] transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-4',
+  'cursor-pointer inline-flex items-center justify-center gap-2 rounded-3xl border font-semibold tracking-[0.01em] transition duration-200 ease-out focus-visible:outline-none focus-visible:ring-4',
   variantClass.value,
   textColorClass.value,
   sizeClass.value,
@@ -102,14 +102,14 @@ const textColorClass = computed(() => {
 
 const sizeClass = computed(() => {
   if (props.size === 'sm') {
-    return 'min-h-10 px-4 text-sm'
+    return 'min-h-10 max-h-15 px-4 text-sm'
   }
 
   if (props.size === 'lg') {
-    return 'min-h-14 px-6 text-base'
+    return 'min-h-14 max-h-21 px-6 text-base'
   }
 
-  return 'min-h-12 px-5 text-sm'
+  return 'min-h-12 max-h-18 px-5 text-sm'
 })
 
 const spinnerTone = computed(() => {

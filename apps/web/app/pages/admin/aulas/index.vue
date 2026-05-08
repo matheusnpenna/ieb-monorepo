@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import PageIntro from '../../../components/base/PageIntro.vue'
-import SurfaceCard from '../../../components/base/SurfaceCard.vue'
+import AdminLessonsListView from '../../../components/admin/AdminLessonsListView.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -12,11 +11,5 @@ useSeoMeta({
 </script>
 
 <template>
-  <SurfaceCard>
-    <PageIntro
-      eyebrow="Aulas"
-      title="Gestao de aulas"
-      description="Template inicial para conteudos de video, texto e audio com origem controlada pelo servidor."
-    />
-  </SurfaceCard>
+  <AdminLessonsListView />
 </template>
