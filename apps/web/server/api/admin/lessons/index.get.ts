@@ -1,5 +1,5 @@
 import type { AdminLessonsResponse, AuthSessionContext } from '@ieb/shared'
-import { defineEventHandler, setResponseStatus } from 'h3'
+import { defineEventHandler, getQuery, setResponseStatus } from 'h3'
 import { requireAuthSession, writeAdminLog } from '../../../utils/auth'
 import { listAdminLessonsForManagement } from '../../../utils/courses'
 
@@ -8,7 +8,11 @@ export default defineEventHandler(async (event): Promise<AdminLessonsResponse> =
 
   try {
     session = await requireAuthSession(event, { admin: true })
-    const lessons = await listAdminLessonsForManagement(session)
+    const query = getQuery(event)
+    const lessons = await listAdminLessonsForManagement(session, {
+      courseId: typeof query.courseId === 'string' ? query.courseId : '',
+      moduleId: typeof query.moduleId === 'string' ? query.moduleId : ''
+    })
 
     return {
       status: 'success',

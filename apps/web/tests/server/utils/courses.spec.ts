@@ -950,6 +950,82 @@ describe('admin lesson management', () => {
     expect(lessons.map((lesson) => lesson.slug)).toEqual(['aula-a', 'aula-b'])
   })
 
+  it('filters lessons by selected course and module even when legacy relations use slugs', async () => {
+    const legacyCourse = buildCourse({
+      id: 'course-doc-1',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica'
+    })
+    const legacyModule = buildModule({
+      id: 'module-doc-1',
+      courseId: legacyCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: 'fundamentos-da-fe'
+    })
+    const legacyLesson = buildLesson({
+      id: 'lesson-doc-1',
+      courseId: legacyCourse.slug,
+      moduleId: legacyModule.slug,
+      title: 'Introducao a Teologia',
+      slug: 'introducao-a-teologia'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId === legacyCourse.id ? createDocumentSnapshot(legacyCourse) : { exists: false }
+            )
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'slug' && fieldValue === legacyCourse.slug
+                  ? [createDocumentSnapshot(legacyCourse)]
+                  : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId === legacyModule.id ? createDocumentSnapshot(legacyModule) : { exists: false }
+            )
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'slug' && fieldValue === legacyModule.slug
+                  ? [createDocumentSnapshot(legacyModule)]
+                  : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'lessons') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [createDocumentSnapshot(legacyLesson)]
+          })
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const lessons = await listAdminLessonsForManagement(adminSession, {
+      courseId: legacyCourse.id,
+      moduleId: legacyModule.id
+    })
+
+    expect(lessons.map((lesson) => lesson.slug)).toEqual(['introducao-a-teologia'])
+  })
+
   it('creates, updates, loads and soft deletes a lesson while syncing lesson order in the module', async () => {
     const adminLogSet = vi.fn().mockResolvedValue(undefined)
     const storedCourses = new Map<string, Course>()

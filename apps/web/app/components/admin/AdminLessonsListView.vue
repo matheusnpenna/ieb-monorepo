@@ -43,18 +43,29 @@ const defaultModulesResponse = {
 } satisfies AdminModulesResponse
 
 const searchTerm = ref('')
-const selectedCourseId = ref(typeof route.query.course === 'string' ? route.query.course : 'all')
-const selectedModuleId = ref(typeof route.query.module === 'string' ? route.query.module : 'all')
+const selectedCourseId = ref(typeof route.query.course === 'string' ? route.query.course : '')
+const selectedModuleId = ref(typeof route.query.module === 'string' ? route.query.module : '')
+const hasRequiredFilters = computed(() => Boolean(selectedCourseId.value && selectedModuleId.value))
 
 const { data: lessonsResponse, pending: lessonsPending } = await useAsyncData<AdminLessonsResponse>(
-  'admin-lessons-list',
-  () =>
-    $fetch('/api/admin/lessons', {
+  () => `admin-lessons-list-${selectedCourseId.value || 'empty'}-${selectedModuleId.value || 'empty'}`,
+  () => {
+    if (!hasRequiredFilters.value) {
+      return Promise.resolve(defaultLessonsResponse)
+    }
+
+    return $fetch('/api/admin/lessons', {
       credentials: 'include',
-      ignoreResponseError: true
-    }),
+      ignoreResponseError: true,
+      query: {
+        courseId: selectedCourseId.value,
+        moduleId: selectedModuleId.value
+      }
+    })
+  },
   {
-    default: () => defaultLessonsResponse
+    default: () => defaultLessonsResponse,
+    watch: [selectedCourseId, selectedModuleId]
   }
 )
 
@@ -112,8 +123,8 @@ const courseById = computed(() => new Map(courses.value.map((course) => [course.
 const moduleById = computed(() => new Map(modules.value.map((module) => [module.id, module] as const)))
 
 const availableModulesForFilter = computed(() => {
-  if (selectedCourseId.value === 'all') {
-    return modules.value
+  if (!selectedCourseId.value) {
+    return []
   }
 
   return modules.value.filter((module) => module.courseId === selectedCourseId.value)
@@ -123,10 +134,10 @@ watch(
   selectedCourseId,
   () => {
     if (
-      selectedModuleId.value !== 'all' &&
+      selectedModuleId.value &&
       !availableModulesForFilter.value.some((module) => module.id === selectedModuleId.value)
     ) {
-      selectedModuleId.value = 'all'
+      selectedModuleId.value = ''
     }
   }
 )
@@ -163,14 +174,6 @@ const filteredLessons = computed(() => {
   const normalizedSearch = searchTerm.value.trim().toLowerCase()
 
   return lessons.value.filter((lesson) => {
-    if (selectedCourseId.value !== 'all' && lesson.courseId !== selectedCourseId.value) {
-      return false
-    }
-
-    if (selectedModuleId.value !== 'all' && lesson.moduleId !== selectedModuleId.value) {
-      return false
-    }
-
     if (!normalizedSearch) {
       return true
     }
@@ -266,11 +269,11 @@ const listErrorMessage = computed(
 const newLessonHref = computed(() => {
   const searchParams = new URLSearchParams()
 
-  if (selectedCourseId.value !== 'all') {
+  if (selectedCourseId.value) {
     searchParams.set('course', selectedCourseId.value)
   }
 
-  if (selectedModuleId.value !== 'all') {
+  if (selectedModuleId.value) {
     searchParams.set('module', selectedModuleId.value)
   }
 
@@ -294,17 +297,18 @@ const newLessonHref = computed(() => {
           <UiInput
             v-model="searchTerm"
             placeholder="Pesquisar por titulo da aula"
+            :disabled="!hasRequiredFilters"
           />
 
           <UiSelect v-model="selectedCourseId">
-            <option value="all">Todos os cursos</option>
+            <option value="" disabled>Selecione um curso</option>
             <option v-for="course in courses" :key="course.id" :value="course.id">
               {{ course.title }}
             </option>
           </UiSelect>
 
-          <UiSelect v-model="selectedModuleId">
-            <option value="all">Todos os modulos</option>
+          <UiSelect v-model="selectedModuleId" :disabled="!selectedCourseId">
+            <option value="" disabled>Selecione um modulo</option>
             <option v-for="module in availableModulesForFilter" :key="module.id" :value="module.id">
               {{ module.title }}
             </option>
@@ -316,12 +320,16 @@ const newLessonHref = computed(() => {
         </div>
 
         <UiSpinner
-          v-if="lessonsPending || coursesPending || modulesPending"
+          v-if="hasRequiredFilters && (lessonsPending || coursesPending || modulesPending)"
           size="lg"
           label="Carregando aulas do painel"
         >
           <span class="body-copy">Carregando aulas do painel...</span>
         </UiSpinner>
+
+        <p v-else-if="!hasRequiredFilters" class="body-copy">
+          Selecione primeiro um curso e um modulo para carregar a lista de aulas.
+        </p>
 
         <p v-else-if="listErrorMessage" class="feedback-message" data-tone="error">
           {{ listErrorMessage }}

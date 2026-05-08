@@ -182,6 +182,23 @@ const getCourseById = async (courseId: string) => {
   return toCourseDocument(snapshot)
 }
 
+const getCourseBySlug = async (courseSlug: string) => {
+  const courseById = await getCourseById(courseSlug)
+
+  if (courseById) {
+    return courseById
+  }
+
+  const snapshot = await getFirebaseAdminCollection('courses').where('slug', '==', courseSlug).get()
+  const legacyCourseSnapshot = snapshot.docs.find((document) => {
+    const course = toCourseDocument(document)
+
+    return !course.deletedAt
+  })
+
+  return legacyCourseSnapshot ? toCourseDocument(legacyCourseSnapshot) : null
+}
+
 const assertAdminCoursePayload = (
   input: AdminCourseInput,
   options?: { currentCourseSlug?: string; resolvedSlug?: string }
@@ -1038,12 +1055,64 @@ export const listAdminModulesForManagement = async (session: AuthSessionContext)
   return await listAdminModules()
 }
 
-export const listAdminLessonsForManagement = async (session: AuthSessionContext) => {
+export const listAdminLessonsForManagement = async (
+  session: AuthSessionContext,
+  filters?: {
+    courseId?: string
+    moduleId?: string
+  }
+) => {
   if (session.user.role !== 'admin') {
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  return await listAdminLessons()
+  const lessons = await listAdminLessons()
+  const requestedCourseId = typeof filters?.courseId === 'string' ? filters.courseId.trim() : ''
+  const requestedModuleId = typeof filters?.moduleId === 'string' ? filters.moduleId.trim() : ''
+  const normalizedCourseSlug = requestedCourseId ? normalizeCourseSlug(requestedCourseId) : ''
+  const normalizedModuleSlug = requestedModuleId ? normalizeCourseSlug(requestedModuleId) : ''
+  const [resolvedCourse, resolvedModule] = await Promise.all([
+    requestedCourseId
+      ? (async () => {
+          const courseById = await getCourseById(requestedCourseId)
+
+          if (courseById) {
+            return courseById
+          }
+
+          return normalizedCourseSlug ? await getCourseBySlug(normalizedCourseSlug) : null
+        })()
+      : Promise.resolve(null),
+    requestedModuleId
+      ? (async () => {
+          const moduleById = await getModuleById(requestedModuleId)
+
+          if (moduleById) {
+            return moduleById
+          }
+
+          return normalizedModuleSlug ? await getModuleBySlug(normalizedModuleSlug) : null
+        })()
+      : Promise.resolve(null)
+  ])
+  const acceptedCourseIds = new Set(
+    [requestedCourseId, normalizedCourseSlug, resolvedCourse?.id || '', resolvedCourse?.slug || ''].filter(Boolean)
+  )
+  const acceptedModuleIds = new Set(
+    [requestedModuleId, normalizedModuleSlug, resolvedModule?.id || '', resolvedModule?.slug || ''].filter(Boolean)
+  )
+
+  return lessons.filter((lesson) => {
+    if (acceptedCourseIds.size > 0 && !acceptedCourseIds.has(lesson.courseId)) {
+      return false
+    }
+
+    if (acceptedModuleIds.size > 0 && !acceptedModuleIds.has(lesson.moduleId)) {
+      return false
+    }
+
+    return true
+  })
 }
 
 export const getAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string) => {
