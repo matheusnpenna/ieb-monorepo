@@ -21,7 +21,7 @@ export default defineEventHandler(async (event): Promise<AdminUploadedImageRespo
       })
     }
 
-    if (fieldValue !== 'cover' && fieldValue !== 'hero') {
+    if (fieldValue !== 'cover' && fieldValue !== 'hero' && fieldValue !== 'avatar') {
       throw createError({
         statusCode: 400,
         statusMessage: 'Informe um campo de imagem valido.'
@@ -54,12 +54,18 @@ export default defineEventHandler(async (event): Promise<AdminUploadedImageRespo
         : 'Nao foi possivel enviar a imagem.'
 
     if (session) {
+      const targetCollection = fieldValue === 'avatar' ? 'users' : 'courses'
+      const summary =
+        fieldValue === 'avatar'
+          ? 'Falha ao enviar imagem administrativa para usuario.'
+          : 'Falha ao enviar imagem administrativa para curso.'
+
       try {
         await writeAdminLog(session, {
           action: 'update',
-          targetCollection: 'courses',
+          targetCollection,
           targetId: fieldValue || 'image-upload',
-          summary: 'Falha ao enviar imagem administrativa para curso.',
+          summary,
           metadata: {
             field: fieldValue || null,
             statusCode,

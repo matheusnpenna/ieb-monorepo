@@ -6,7 +6,7 @@ import { writeAdminLog } from './auth'
 import { getFirebaseAdminBucket } from './firebase-admin'
 
 interface UploadAdminCourseImageInput {
-  field: 'cover' | 'hero'
+  field: 'cover' | 'hero' | 'avatar'
   filename: string
   mimeType: string
   data: Uint8Array
@@ -51,7 +51,8 @@ export const uploadAdminCourseImage = async (
   const bucket = getFirebaseAdminBucket()
   const safeFilename = sanitizeFilename(input.filename)
   const extension = extname(safeFilename) || '.bin'
-  const objectPath = `admin/courses/${input.field}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${extension}`
+  const assetDirectory = input.field === 'avatar' ? 'users/avatar' : `courses/${input.field}`
+  const objectPath = `admin/${assetDirectory}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${extension}`
   const file = bucket.file(objectPath)
 
   await file.save(Buffer.from(input.data), {
@@ -66,12 +67,15 @@ export const uploadAdminCourseImage = async (
   await file.makePublic()
 
   const url = `https://storage.googleapis.com/${bucket.name}/${objectPath}`
+  const targetCollection = input.field === 'avatar' ? 'users' : 'courses'
+  const fieldLabel =
+    input.field === 'cover' ? 'capa' : input.field === 'hero' ? 'hero' : 'avatar'
 
   await writeAdminLog(session, {
     action: 'update',
-    targetCollection: 'courses',
+    targetCollection,
     targetId: objectPath,
-    summary: `Imagem de ${input.field === 'cover' ? 'capa' : 'hero'} enviada para o storage administrativo.`,
+    summary: `Imagem de ${fieldLabel} enviada para o storage administrativo.`,
     metadata: {
       field: input.field,
       url

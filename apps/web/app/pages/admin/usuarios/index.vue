@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import PageIntro from '../../../components/base/PageIntro.vue'
-import SurfaceCard from '../../../components/base/SurfaceCard.vue'
+import AdminUsersListView from '../../../components/admin/AdminUsersListView.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -12,11 +11,5 @@ useSeoMeta({
 </script>
 
 <template>
-  <SurfaceCard>
-    <PageIntro
-      eyebrow="Usuarios"
-      title="Gestao de alunos e administradores"
-      description="Tela-base para perfil, status, tipo de acesso e historico administrativo."
-    />
-  </SurfaceCard>
+  <AdminUsersListView />
 </template>

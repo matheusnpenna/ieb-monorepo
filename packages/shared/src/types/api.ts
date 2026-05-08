@@ -1,4 +1,5 @@
 import type {
+  AdminActivityLog,
   Assessment,
   AssessmentQuestionType,
   Classroom,
@@ -7,6 +8,10 @@ import type {
   CourseVisibility,
   Lesson,
   LessonContentType,
+  User,
+  UserRegion,
+  UserRole,
+  UserStatus,
   VideoProvider
 } from './database'
 
@@ -131,6 +136,21 @@ export interface AdminClassroomInput {
 export type AdminClassroomsResponse = ApiResponse<Classroom[]>
 export type AdminClassroomResponse = ApiResponse<Classroom | null>
 
+export interface AdminUserInput {
+  fullName: string
+  cpf: string
+  email: string
+  password: string | null
+  role: UserRole
+  status: UserStatus
+  phone: string | null
+  avatarUrl: string | null
+  region: UserRegion
+}
+
+export type AdminUsersResponse = ApiResponse<User[]>
+export type AdminUserResponse = ApiResponse<User | null>
+
 export interface AdminUploadedImageData {
   url: string
   path: string
@@ -138,6 +158,18 @@ export interface AdminUploadedImageData {
 }
 
 export type AdminUploadedImageResponse = ApiResponse<AdminUploadedImageData | null>
+
+export interface AdminLogsPagination {
+  nextCursor: string | null
+  pageSize: number
+}
+
+export interface AdminLogsData {
+  items: AdminActivityLog[]
+  pagination: AdminLogsPagination
+}
+
+export type AdminLogsResponse = ApiResponse<AdminLogsData | null>
 
 export interface CourseDetailActionLinks {
   startCourseHref: string | null
