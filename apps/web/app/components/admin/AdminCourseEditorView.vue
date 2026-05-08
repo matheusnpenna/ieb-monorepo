@@ -7,6 +7,7 @@ import type {
   Course
 } from '@ieb/shared'
 import PageIntro from '../base/PageIntro.vue'
+import AdminImageUploadField from './AdminImageUploadField.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
@@ -453,99 +454,29 @@ const onDeleteRequest = () => {
             <UiInput v-model="courseForm.coverImageUrl" placeholder="https://..." />
           </UiField>
 
-          <UiField label="Upload da capa" hint="Envie uma imagem para preencher automaticamente a URL da capa.">
-            <div class="asset-upload-stack">
-              <input
-                accept="image/*"
-                class="asset-file-input"
-                type="file"
-                @change="onFileSelected('cover', $event)"
-              >
-              <UiButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                :loading="assetUploadPending === 'cover'"
-                :disabled="!selectedFiles.cover"
-                aria-label="Enviar capa"
-                @click="uploadImageAsset('cover')"
-              >
-                <svg class="upload-icon" viewBox="0 0 20 20" aria-hidden="true">
-                  <path
-                    d="M10 13.8V4.9"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="1.7"
-                  />
-                  <path
-                    d="M6.8 8.1L10 4.9l3.2 3.2"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.7"
-                  />
-                  <path
-                    d="M4.5 15.1h11"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="1.7"
-                  />
-                </svg>
-              </UiButton>
-            </div>
-          </UiField>
+          <AdminImageUploadField
+            label="Upload da capa"
+            hint="Envie uma imagem para preencher automaticamente a URL da capa."
+            button-label="Enviar capa"
+            :loading="assetUploadPending === 'cover'"
+            :disabled="!selectedFiles.cover"
+            @select="onFileSelected('cover', $event)"
+            @upload="uploadImageAsset('cover')"
+          />
 
           <UiField label="URL do hero" hint="Voce pode colar uma URL ou enviar um arquivo abaixo.">
             <UiInput v-model="courseForm.heroImageUrl" placeholder="https://..." />
           </UiField>
 
-          <UiField label="Upload do hero" hint="Envie uma imagem para preencher automaticamente a URL do hero.">
-            <div class="asset-upload-stack">
-              <input
-                accept="image/*"
-                class="asset-file-input"
-                type="file"
-                @change="onFileSelected('hero', $event)"
-              >
-              <UiButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                :loading="assetUploadPending === 'hero'"
-                :disabled="!selectedFiles.hero"
-                aria-label="Enviar hero"
-                @click="uploadImageAsset('hero')"
-              >
-                <svg class="upload-icon" viewBox="0 0 20 20" aria-hidden="true">
-                  <path
-                    d="M10 13.8V4.9"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="1.7"
-                  />
-                  <path
-                    d="M6.8 8.1L10 4.9l3.2 3.2"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.7"
-                  />
-                  <path
-                    d="M4.5 15.1h11"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="1.7"
-                  />
-                </svg>
-              </UiButton>
-            </div>
-          </UiField>
+          <AdminImageUploadField
+            label="Upload do hero"
+            hint="Envie uma imagem para preencher automaticamente a URL do hero."
+            button-label="Enviar hero"
+            :loading="assetUploadPending === 'hero'"
+            :disabled="!selectedFiles.hero"
+            @select="onFileSelected('hero', $event)"
+            @upload="uploadImageAsset('hero')"
+          />
         </div>
 
         <div class="form-actions">
@@ -581,29 +512,6 @@ const onDeleteRequest = () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-}
-
-.asset-upload-stack {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.asset-file-input {
-  display: block;
-  width: 100%;
-  border: 1px solid var(--ds-border);
-  border-radius: 18px;
-  padding: 0.85rem 1rem;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
-  color: var(--ds-text);
-}
-
-.upload-icon {
-  width: 1rem;
-  height: 1rem;
-  flex: none;
 }
 
 @media (max-width: 960px) {

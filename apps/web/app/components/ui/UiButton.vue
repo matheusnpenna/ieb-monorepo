@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue'
+import UiSpinner from './UiSpinner.vue'
 
 defineOptions({
   inheritAttrs: false
@@ -51,7 +52,7 @@ const sharedClass = computed(() => [
   textColorClass.value,
   sizeClass.value,
   props.block ? 'w-full' : 'w-auto',
-  isDisabled.value ? 'pointer-events-none opacity-60' : ''
+  isDisabled.value ? 'pointer-events-none cursor-not-allowed opacity-60' : ''
 ])
 
 const variantClass = computed(() => {
@@ -70,64 +71,33 @@ const variantClass = computed(() => {
   return 'border-[color:var(--ds-accent)] bg-[linear-gradient(180deg,#ff2d2d_0%,#b20710_100%)] shadow-[0_14px_30px_rgba(229,9,20,0.28)] hover:-translate-y-0.5 hover:brightness-110 focus-visible:ring-[rgba(229,9,20,0.2)]'
 })
 
+const textColorMap = {
+  bg: 'text-[color:var(--ds-bg)]',
+  'bg-elevated': 'text-[color:var(--ds-bg-elevated)]',
+  surface: 'text-[color:var(--ds-surface)]',
+  'surface-strong': 'text-[color:var(--ds-surface-strong)]',
+  border: 'text-[color:var(--ds-border)]',
+  text: 'text-[color:var(--ds-text)]',
+  muted: 'text-[color:var(--ds-muted)]',
+  accent: 'text-[color:var(--ds-accent)]',
+  'accent-strong': 'text-[color:var(--ds-accent-strong)]',
+  success: 'text-[color:var(--ds-success)]',
+  danger: 'text-[color:var(--ds-danger)]'
+} as const
+
+const variantTextColorMap = {
+  primary: 'text-white',
+  secondary: 'text-[color:var(--ds-text)]',
+  ghost: 'text-white/78 hover:text-white',
+  success: 'text-[#06110a]'
+} as const
+
 const textColorClass = computed(() => {
-  if (props.textColor === 'bg') {
-    return 'text-[color:var(--ds-bg)]'
+  if (props.textColor !== 'auto') {
+    return textColorMap[props.textColor]
   }
 
-  if (props.textColor === 'bg-elevated') {
-    return 'text-[color:var(--ds-bg-elevated)]'
-  }
-
-  if (props.textColor === 'surface') {
-    return 'text-[color:var(--ds-surface)]'
-  }
-
-  if (props.textColor === 'surface-strong') {
-    return 'text-[color:var(--ds-surface-strong)]'
-  }
-
-  if (props.textColor === 'border') {
-    return 'text-[color:var(--ds-border)]'
-  }
-
-  if (props.textColor === 'text') {
-    return 'text-[color:var(--ds-text)]'
-  }
-
-  if (props.textColor === 'muted') {
-    return 'text-[color:var(--ds-muted)]'
-  }
-
-  if (props.textColor === 'accent') {
-    return 'text-[color:var(--ds-accent)]'
-  }
-
-  if (props.textColor === 'accent-strong') {
-    return 'text-[color:var(--ds-accent-strong)]'
-  }
-
-  if (props.textColor === 'success') {
-    return 'text-[color:var(--ds-success)]'
-  }
-
-  if (props.textColor === 'danger') {
-    return 'text-[color:var(--ds-danger)]'
-  }
-
-  if (props.variant === 'ghost') {
-    return 'text-white/78 hover:text-white'
-  }
-
-  if (props.variant === 'success') {
-    return 'text-[#06110a]'
-  }
-
-  if (props.variant === 'secondary') {
-    return 'text-[color:var(--ds-text)]'
-  }
-
-  return 'text-white'
+  return variantTextColorMap[props.variant]
 })
 
 const sizeClass = computed(() => {
@@ -140,6 +110,14 @@ const sizeClass = computed(() => {
   }
 
   return 'min-h-12 px-5 text-sm'
+})
+
+const spinnerTone = computed(() => {
+  if (props.variant === 'success') {
+    return 'neutral'
+  }
+
+  return 'light'
 })
 </script>
 
@@ -154,7 +132,8 @@ const sizeClass = computed(() => {
     :aria-busy="loading ? 'true' : undefined"
     :class="sharedClass"
   >
-    <slot />
+    <UiSpinner v-if="loading" class="ui-button__spinner" size="sm" :tone="spinnerTone" label="Carregando" />
+    <slot v-else />
   </NuxtLink>
 
   <a
@@ -167,7 +146,8 @@ const sizeClass = computed(() => {
     :aria-busy="loading ? 'true' : undefined"
     :class="sharedClass"
   >
-    <slot />
+    <UiSpinner v-if="loading" class="ui-button__spinner" size="sm" :tone="spinnerTone" label="Carregando" />
+    <slot v-else />
   </a>
 
   <button
@@ -178,6 +158,15 @@ const sizeClass = computed(() => {
     :aria-busy="loading ? 'true' : undefined"
     :class="sharedClass"
   >
-    <slot />
+    <UiSpinner v-if="loading" class="ui-button__spinner" size="sm" :tone="spinnerTone" label="Carregando" />
+    <slot v-else />
   </button>
 </template>
+
+<style scoped>
+.ui-button__spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
