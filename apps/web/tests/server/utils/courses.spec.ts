@@ -12,25 +12,31 @@ vi.mock('../../../server/utils/firebase-admin', () => ({
 }))
 
 import {
+  createAdminAssessment,
   createAdminCourse,
   createAdminLesson,
   createAdminModule,
+  deleteAdminAssessmentBySlug,
   deleteAdminCourseBySlug,
   deleteAdminLessonBySlug,
   deleteAdminModuleBySlug,
+  getAccessibleModuleAssessmentsBySlugs,
   getAccessibleCourseDetailBySlug,
   getAccessibleModuleDetailBySlugs,
   getAccessibleLessonDetailBySlugs,
+  getAdminAssessmentBySlug,
   getAdminCourseBySlug,
   getAdminLessonBySlug,
   getAdminModuleBySlug,
   getHomeMetrics,
+  listAdminAssessmentsForManagement,
   listAccessibleCourses,
   listAdminCoursesForManagement,
   listAdminLessonsForManagement,
   listAdminModulesForManagement,
   listLessonCommentsBySlugs,
   markLessonAsCompletedBySlugs,
+  updateAdminAssessmentBySlug,
   updateAdminCourseBySlug,
   updateAdminLessonBySlug,
   updateAdminModuleBySlug,
@@ -154,6 +160,7 @@ const buildAssessment = (
   title: overrides.title,
   slug: overrides.slug,
   description: overrides.description || 'Descricao da avaliacao',
+  questionType: overrides.questionType || 'multiple_choice',
   passingScore: overrides.passingScore ?? 70,
   timeLimitInMinutes: overrides.timeLimitInMinutes ?? 30,
   questions: overrides.questions ?? [],
@@ -1259,6 +1266,475 @@ describe('admin lesson management', () => {
 
     expect(loadedLesson.id).toBe('lesson-doc-1')
     expect(loadedLesson.slug).toBe('introducao-a-teologia')
+  })
+})
+
+describe('admin assessment management', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const adminSession = {
+    user: {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      fullName: 'Admin User',
+      role: 'admin' as const,
+      status: 'active' as const,
+      region: 'feira-de-santana' as const,
+      avatarUrl: null
+    },
+    issuedAt: '2026-05-08T00:00:00.000Z'
+  }
+
+  it('lists admin assessments for management filtered by course and module', async () => {
+    const course = buildCourse({
+      id: 'curso-1',
+      title: 'Curso 1',
+      slug: 'curso-1'
+    })
+    const module = buildModule({
+      id: 'modulo-1',
+      courseId: course.id,
+      title: 'Modulo 1',
+      slug: 'modulo-1'
+    })
+    const assessmentOne = buildAssessment({
+      id: 'avaliacao-1',
+      courseId: 'curso-1',
+      moduleId: 'modulo-1',
+      title: 'Prova A',
+      slug: 'prova-a'
+    })
+    const assessmentTwo = buildAssessment({
+      id: 'avaliacao-2',
+      courseId: 'curso-2',
+      moduleId: 'modulo-2',
+      title: 'Prova B',
+      slug: 'prova-b'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'assessments') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [createDocumentSnapshot(assessmentTwo), createDocumentSnapshot(assessmentOne)]
+          })
+        }
+      }
+
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(documentId === course.id ? createDocumentSnapshot(course) : { exists: false })
+          })),
+          where: vi.fn((_fieldName: string, _operator: string, slug: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: slug === course.slug ? [createDocumentSnapshot(course)] : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(documentId === module.id ? createDocumentSnapshot(module) : { exists: false })
+          })),
+          where: vi.fn((_fieldName: string, _operator: string, slug: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: slug === module.slug ? [createDocumentSnapshot(module)] : []
+            })
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const assessments = await listAdminAssessmentsForManagement(adminSession, {
+      courseId: 'curso-1',
+      moduleId: 'modulo-1'
+    })
+
+    expect(assessments.map((assessment) => assessment.slug)).toEqual(['prova-a'])
+  })
+
+  it('lists admin assessments for management when filters use slugs and records use document ids', async () => {
+    const legacyCourse = buildCourse({
+      id: 'curso-doc-1',
+      title: 'Curso 1',
+      slug: 'curso-1'
+    })
+    const legacyModule = buildModule({
+      id: 'modulo-doc-1',
+      courseId: legacyCourse.id,
+      title: 'Modulo 1',
+      slug: 'modulo-1'
+    })
+    const assessmentOne = buildAssessment({
+      id: 'avaliacao-1',
+      courseId: legacyCourse.id,
+      moduleId: legacyModule.id,
+      title: 'Prova A',
+      slug: 'prova-a'
+    })
+    const assessmentTwo = buildAssessment({
+      id: 'avaliacao-2',
+      courseId: 'curso-2',
+      moduleId: 'modulo-2',
+      title: 'Prova B',
+      slug: 'prova-b'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'assessments') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [createDocumentSnapshot(assessmentTwo), createDocumentSnapshot(assessmentOne)]
+          })
+        }
+      }
+
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId === legacyCourse.id ? createDocumentSnapshot(legacyCourse) : { exists: false }
+            )
+          })),
+          where: vi.fn((_fieldName: string, _operator: string, slug: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: slug === legacyCourse.slug ? [createDocumentSnapshot(legacyCourse)] : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId === legacyModule.id ? createDocumentSnapshot(legacyModule) : { exists: false }
+            )
+          })),
+          where: vi.fn((_fieldName: string, _operator: string, slug: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: slug === legacyModule.slug ? [createDocumentSnapshot(legacyModule)] : []
+            })
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const assessments = await listAdminAssessmentsForManagement(adminSession, {
+      courseId: legacyCourse.slug,
+      moduleId: legacyModule.slug
+    })
+
+    expect(assessments.map((assessment) => assessment.slug)).toEqual(['prova-a'])
+  })
+
+  it('creates, updates, loads and soft deletes an assessment while syncing module assessment ids', async () => {
+    const adminLogSet = vi.fn().mockResolvedValue(undefined)
+    const storedCourses = new Map<string, Course>()
+    const storedModules = new Map<string, CourseModule>()
+    const storedAssessments = new Map<string, Assessment>()
+    const baseCourse = buildCourse({
+      id: 'teologia-basica',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica',
+      moduleIds: ['fundamentos-da-fe']
+    })
+    const baseModule = buildModule({
+      id: 'fundamentos-da-fe',
+      courseId: baseCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: 'fundamentos-da-fe',
+      assessmentIds: []
+    })
+
+    storedCourses.set(baseCourse.id, baseCourse)
+    storedModules.set(baseModule.id, baseModule)
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedCourses.has(documentId)
+                ? createDocumentSnapshot(storedCourses.get(documentId)!)
+                : { exists: false }
+            )
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedModules.has(documentId)
+                ? createDocumentSnapshot(storedModules.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingModule = storedModules.get(documentId)
+              const nextModule =
+                options?.merge && existingModule
+                  ? ({ ...existingModule, ...(payload as Partial<CourseModule>), id: documentId } as CourseModule)
+                  : ({ ...(existingModule || {}), ...(payload as Partial<CourseModule>), id: documentId } as CourseModule)
+
+              storedModules.set(documentId, nextModule)
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'assessments') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [...storedAssessments.values()].map(createDocumentSnapshot)
+          }),
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedAssessments.has(documentId)
+                ? createDocumentSnapshot(storedAssessments.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingAssessment = storedAssessments.get(documentId)
+              const nextAssessment =
+                options?.merge && existingAssessment
+                  ? ({ ...existingAssessment, ...(payload as Partial<Assessment>), id: documentId } as Assessment)
+                  : ({ ...(existingAssessment || {}), ...(payload as Partial<Assessment>), id: documentId } as Assessment)
+
+              storedAssessments.set(documentId, nextAssessment)
+            })
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'moduleId' && fieldValue === baseModule.id
+                  ? [...storedAssessments.values()]
+                      .filter((assessment) => assessment.moduleId === baseModule.id)
+                      .map(createDocumentSnapshot)
+                  : fieldName === 'slug'
+                    ? [...storedAssessments.values()]
+                        .filter((assessment) => assessment.slug === fieldValue)
+                        .map(createDocumentSnapshot)
+                    : []
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'adminLogs') {
+        return {
+          doc: vi.fn(() => ({
+            id: 'log-1',
+            set: adminLogSet
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const createdAssessment = await createAdminAssessment(adminSession, {
+      courseId: baseCourse.id,
+      moduleId: baseModule.id,
+      title: 'Avaliacao do Modulo',
+      slug: 'avaliacao-do-modulo',
+      description: 'Prova principal do modulo.',
+      questionType: 'multiple_choice',
+      passingScore: 70,
+      timeLimitInMinutes: 30,
+      questions: [
+        {
+          id: 'q1',
+          prompt: 'Pergunta 1',
+          explanation: null,
+          options: [
+            { id: 'o1', label: 'Alternativa 1', isCorrect: true },
+            { id: 'o2', label: 'Alternativa 2', isCorrect: false }
+          ]
+        }
+      ]
+    })
+
+    expect(createdAssessment.slug).toBe('avaliacao-do-modulo')
+    expect(storedModules.get(baseModule.id)?.assessmentIds).toEqual(['avaliacao-do-modulo'])
+
+    const loadedAssessment = await getAdminAssessmentBySlug(adminSession, 'avaliacao-do-modulo')
+    expect(loadedAssessment.title).toBe('Avaliacao do Modulo')
+
+    const updatedAssessment = await updateAdminAssessmentBySlug(adminSession, 'avaliacao-do-modulo', {
+      courseId: baseCourse.id,
+      moduleId: baseModule.id,
+      title: 'Avaliacao revisada',
+      slug: 'avaliacao-do-modulo',
+      description: 'Prova revisada.',
+      questionType: 'free_text',
+      passingScore: 80,
+      timeLimitInMinutes: null,
+      questions: [
+        {
+          id: 'q1',
+          prompt: 'Pergunta aberta 1',
+          explanation: null,
+          options: []
+        }
+      ]
+    })
+
+    expect(updatedAssessment.title).toBe('Avaliacao revisada')
+    expect(updatedAssessment.questionType).toBe('free_text')
+
+    const deletedAssessment = await deleteAdminAssessmentBySlug(adminSession, 'avaliacao-do-modulo')
+    expect(deletedAssessment.deletedAt).toBeTruthy()
+    expect(storedModules.get(baseModule.id)?.assessmentIds).toEqual([])
+  })
+})
+
+describe('getAccessibleModuleAssessmentsBySlugs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns blocked availability while the student has not completed all lessons', async () => {
+    const course = buildCourse({
+      id: 'curso-1',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica',
+      moduleIds: ['modulo-1']
+    })
+    const module = buildModule({
+      id: 'modulo-1',
+      courseId: course.id,
+      title: 'Fundamentos',
+      slug: 'fundamentos',
+      lessonIds: ['aula-1', 'aula-2'],
+      assessmentIds: ['avaliacao-1']
+    })
+    const lessonOne = buildLesson({
+      id: 'aula-1',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Aula 1',
+      slug: 'aula-1'
+    })
+    const lessonTwo = buildLesson({
+      id: 'aula-2',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Aula 2',
+      slug: 'aula-2'
+    })
+    const assessment = buildAssessment({
+      id: 'avaliacao-1',
+      courseId: course.id,
+      moduleId: module.id,
+      title: 'Prova',
+      slug: 'prova'
+    })
+    const progress = buildLessonProgress({
+      id: 'lp1',
+      userId: 'student-1',
+      courseId: course.id,
+      moduleId: module.id,
+      lessonId: lessonOne.id,
+      markedAsCompleted: true,
+      completionRate: 100
+    })
+    const enrollment = buildEnrollment({
+      id: 'enrollment-1',
+      userId: 'student-1',
+      courseId: course.id,
+      status: 'active'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(module)] })
+          }))
+        }
+      }
+
+      if (collectionName === 'lessons') {
+        return {
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(lessonOne), createDocumentSnapshot(lessonTwo)] })
+          }))
+        }
+      }
+
+      if (collectionName === 'assessments') {
+        return {
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(assessment)] })
+          }))
+        }
+      }
+
+      if (collectionName === 'enrollments') {
+        return {
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [{ data: () => enrollment }] })
+          }))
+        }
+      }
+
+      if (collectionName === 'lessonProgress') {
+        return {
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [createDocumentSnapshot(progress)] })
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const data = await getAccessibleModuleAssessmentsBySlugs(
+      {
+        user: {
+          id: 'student-1',
+          email: 'student@example.com',
+          fullName: 'Aluno',
+          role: 'student',
+          status: 'active',
+          region: 'feira-de-santana',
+          avatarUrl: null
+        },
+        issuedAt: '2026-05-08T00:00:00.000Z'
+      },
+      course.slug,
+      module.slug
+    )
+
+    expect(data.availability).toBe('blocked_incomplete_lessons')
+    expect(data.assessments).toEqual([])
   })
 })
 

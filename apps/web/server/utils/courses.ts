@@ -1,4 +1,5 @@
 import type {
+  AdminAssessmentInput,
   AdminCourseInput,
   AdminLessonInput,
   AdminModuleInput,
@@ -14,7 +15,9 @@ import type {
   LessonDetailData,
   LessonCommentItem,
   LessonProgressUpdateData,
-  ModuleDetailLesson
+  ModuleDetailLesson,
+  StudentAssessmentItem,
+  StudentModuleAssessmentData
 } from '@ieb/shared'
 import { createError } from 'h3'
 import { writeAdminLog } from './auth'
@@ -172,6 +175,25 @@ const listAdminLessons = async () => {
     })
 }
 
+const listAdminAssessments = async () => {
+  const snapshot = await getFirebaseAdminCollection('assessments').get()
+
+  return snapshot.docs
+    .map(toAssessmentDocument)
+    .filter((assessment) => !assessment.deletedAt)
+    .sort((left, right) => {
+      if (left.courseId !== right.courseId) {
+        return left.courseId.localeCompare(right.courseId, 'pt-BR')
+      }
+
+      if (left.moduleId !== right.moduleId) {
+        return left.moduleId.localeCompare(right.moduleId, 'pt-BR')
+      }
+
+      return left.title.localeCompare(right.title, 'pt-BR')
+    })
+}
+
 const getCourseById = async (courseId: string) => {
   const snapshot = await getFirebaseAdminCollection('courses').doc(courseId).get()
 
@@ -319,6 +341,33 @@ const getLessonBySlug = async (lessonSlug: string) => {
   })
 
   return legacyLessonSnapshot ? toLessonDocument(legacyLessonSnapshot) : null
+}
+
+const getAssessmentById = async (assessmentId: string) => {
+  const snapshot = await getFirebaseAdminCollection('assessments').doc(assessmentId).get()
+
+  if (!snapshot.exists) {
+    return null
+  }
+
+  return toAssessmentDocument(snapshot)
+}
+
+const getAssessmentBySlug = async (assessmentSlug: string) => {
+  const assessmentById = await getAssessmentById(assessmentSlug)
+
+  if (assessmentById) {
+    return assessmentById
+  }
+
+  const snapshot = await getFirebaseAdminCollection('assessments').where('slug', '==', assessmentSlug).get()
+  const legacyAssessmentSnapshot = snapshot.docs.find((document) => {
+    const assessment = toAssessmentDocument(document)
+
+    return !assessment.deletedAt
+  })
+
+  return legacyAssessmentSnapshot ? toAssessmentDocument(legacyAssessmentSnapshot) : null
 }
 
 const assertAdminModulePayload = (
@@ -489,6 +538,148 @@ const resolveUniqueAdminLessonSlug = async (input: AdminLessonInput) => {
   throw createHttpError(500, 'Nao foi possivel gerar um slug unico para a aula.')
 }
 
+const assertAdminAssessmentPayload = (
+  input: AdminAssessmentInput,
+  options?: {
+    existingAssessment?: Assessment | null
+    resolvedSlug?: string
+  }
+) => {
+  const existingAssessment = options?.existingAssessment || null
+  const normalizedCourseId = normalizeCourseSlug(input.courseId)
+  const normalizedModuleId = normalizeCourseSlug(input.moduleId)
+  const normalizedSlug = normalizeCourseSlug(options?.resolvedSlug || input.slug || input.title)
+
+  if (!normalizedCourseId) {
+    throw createHttpError(400, 'Selecione um curso valido para a avaliacao.')
+  }
+
+  if (!normalizedModuleId) {
+    throw createHttpError(400, 'Selecione um modulo valido para a avaliacao.')
+  }
+
+  if (existingAssessment && normalizedCourseId !== existingAssessment.courseId) {
+    throw createHttpError(400, 'O curso da avaliacao nao pode ser alterado apos a criacao.')
+  }
+
+  if (existingAssessment && normalizedModuleId !== existingAssessment.moduleId) {
+    throw createHttpError(400, 'O modulo da avaliacao nao pode ser alterado apos a criacao.')
+  }
+
+  if (!input.title.trim()) {
+    throw createHttpError(400, 'Informe o titulo da avaliacao.')
+  }
+
+  if (!normalizedSlug || !COURSE_SLUG_REGEX.test(normalizedSlug)) {
+    throw createHttpError(400, 'Informe um slug de avaliacao valido.')
+  }
+
+  if (existingAssessment && normalizedSlug !== existingAssessment.slug) {
+    throw createHttpError(400, 'O slug da avaliacao nao pode ser alterado apos a criacao.')
+  }
+
+  if (!input.description.trim()) {
+    throw createHttpError(400, 'Informe a descricao da avaliacao.')
+  }
+
+  if (!['multiple_choice', 'free_text'].includes(input.questionType)) {
+    throw createHttpError(400, 'Informe um tipo de questao valido para a avaliacao.')
+  }
+
+  if (!Number.isFinite(input.passingScore) || input.passingScore < 0 || input.passingScore > 100) {
+    throw createHttpError(400, 'Informe uma nota minima entre 0 e 100 para a avaliacao.')
+  }
+
+  if (
+    input.timeLimitInMinutes !== null &&
+    (!Number.isFinite(input.timeLimitInMinutes) || Number(input.timeLimitInMinutes) <= 0)
+  ) {
+    throw createHttpError(400, 'Informe um tempo limite valido para a avaliacao.')
+  }
+
+  if (!Array.isArray(input.questions) || input.questions.length === 0) {
+    throw createHttpError(400, 'Cadastre pelo menos uma questao na avaliacao.')
+  }
+
+  const normalizedQuestionIds = new Set<string>()
+
+  for (const question of input.questions) {
+    const normalizedPrompt = question.prompt?.trim?.() || ''
+
+    if (!question.id || normalizedQuestionIds.has(question.id)) {
+      throw createHttpError(400, 'Cada questao da avaliacao precisa ter um identificador unico.')
+    }
+
+    normalizedQuestionIds.add(question.id)
+
+    if (!normalizedPrompt) {
+      throw createHttpError(400, 'Todas as questoes da avaliacao precisam ter um enunciado.')
+    }
+
+    if (input.questionType === 'multiple_choice') {
+      if (!Array.isArray(question.options) || question.options.length < 2) {
+        throw createHttpError(400, 'Questoes de multipla escolha precisam ter ao menos duas alternativas.')
+      }
+
+      const correctOptions = question.options.filter((option) => option.isCorrect)
+
+      if (correctOptions.length !== 1) {
+        throw createHttpError(400, 'Cada questao de multipla escolha precisa ter exatamente uma alternativa correta.')
+      }
+
+      const optionIds = new Set<string>()
+
+      for (const option of question.options) {
+        if (!option.id || optionIds.has(option.id)) {
+          throw createHttpError(400, 'Cada alternativa precisa ter um identificador unico.')
+        }
+
+        optionIds.add(option.id)
+
+        if (!option.label.trim()) {
+          throw createHttpError(400, 'Todas as alternativas precisam ter um texto.')
+        }
+      }
+    }
+
+    if (input.questionType === 'free_text' && question.options.length > 0) {
+      throw createHttpError(400, 'Questoes abertas nao podem possuir alternativas cadastradas.')
+    }
+  }
+
+  return {
+    courseId: normalizedCourseId,
+    moduleId: normalizedModuleId,
+    slug: normalizedSlug
+  }
+}
+
+const resolveUniqueAdminAssessmentSlug = async (input: AdminAssessmentInput) => {
+  const baseSlug = normalizeCourseSlug(input.slug || input.title)
+
+  if (!baseSlug || !COURSE_SLUG_REGEX.test(baseSlug)) {
+    throw createHttpError(400, 'Informe um slug de avaliacao valido.')
+  }
+
+  const existingBaseAssessment = await getAssessmentById(baseSlug)
+
+  if (!existingBaseAssessment) {
+    return baseSlug
+  }
+
+  for (let salt = 0; salt < 50; salt += 1) {
+    const hash = createFourDigitSlugHash(baseSlug, salt)
+    const nextSlug = `${hash}-${baseSlug}`
+    const existingAssessment = await getAssessmentById(nextSlug)
+
+    if (!existingAssessment) {
+      return nextSlug
+    }
+  }
+
+  throw createHttpError(500, 'Nao foi possivel gerar um slug unico para a avaliacao.')
+}
+
 const buildAdminCoursePayload = (
   input: AdminCourseInput,
   actorUserId: string,
@@ -600,6 +791,56 @@ const buildAdminLessonPayload = (
   }
 }
 
+const buildAdminAssessmentPayload = (
+  input: AdminAssessmentInput,
+  actorUserId: string,
+  options: {
+    courseId: string
+    moduleId: string
+    existingAssessment?: Assessment | null
+    resolvedSlug?: string
+  }
+): Assessment => {
+  const existingAssessment = options.existingAssessment || null
+  const now = toTimestamp()
+  const normalizedPayload = assertAdminAssessmentPayload(input, {
+    existingAssessment,
+    resolvedSlug: options.resolvedSlug
+  })
+
+  return {
+    id: normalizedPayload.slug,
+    courseId: options.courseId,
+    moduleId: options.moduleId,
+    title: input.title.trim(),
+    slug: normalizedPayload.slug,
+    description: input.description.trim(),
+    questionType: input.questionType,
+    passingScore: Math.min(100, Math.max(0, Math.floor(input.passingScore))),
+    timeLimitInMinutes:
+      input.timeLimitInMinutes === null ? null : Math.max(1, Math.floor(Number(input.timeLimitInMinutes))),
+    questions: input.questions.map((question) => ({
+      id: question.id,
+      prompt: question.prompt.trim(),
+      explanation: normalizeOptionalText(question.explanation),
+      options:
+        input.questionType === 'multiple_choice'
+          ? question.options.map((option) => ({
+              id: option.id,
+              label: option.label.trim(),
+              isCorrect: Boolean(option.isCorrect)
+            }))
+          : []
+    })),
+    createdAt: existingAssessment?.createdAt || now,
+    updatedAt: now,
+    deletedAt: existingAssessment?.deletedAt ?? null,
+    createdBy: existingAssessment?.createdBy || actorUserId,
+    updatedBy: actorUserId,
+    deletedBy: existingAssessment?.deletedBy ?? null
+  }
+}
+
 const getActiveEnrollmentForCourse = async (userId: string, courseId: string) => {
   const enrollmentSnapshot = await getFirebaseAdminCollection('enrollments').where('userId', '==', userId).get()
 
@@ -654,6 +895,12 @@ const clampLessonOrder = (value: number, totalLessons: number) => {
   const normalizedValue = Math.max(1, Math.floor(value || 1))
 
   return Math.min(normalizedValue, Math.max(1, totalLessons))
+}
+
+const clampAssessmentOrder = (value: number, totalAssessments: number) => {
+  const normalizedValue = Math.max(1, Math.floor(value || 1))
+
+  return Math.min(normalizedValue, Math.max(1, totalAssessments))
 }
 
 const syncCourseModulesOrder = async (
@@ -732,6 +979,25 @@ const syncModuleLessonsOrder = async (
   return orderedLessons
 }
 
+const syncModuleAssessmentsOrder = async (
+  session: AuthSessionContext,
+  module: CourseModule,
+  assessments: Assessment[]
+) => {
+  const now = toTimestamp()
+
+  await getFirebaseAdminCollection('modules').doc(module.id).set(
+    {
+      assessmentIds: assessments.map((assessment) => assessment.id),
+      updatedAt: now,
+      updatedBy: session.user.id
+    },
+    { merge: true }
+  )
+
+  return assessments
+}
+
 const listCourseLessons = async (course: Course) => {
   const lessonSnapshot = await getFirebaseAdminCollection('lessons').where('courseId', '==', course.id).get()
 
@@ -772,6 +1038,25 @@ const listModuleAssessments = async (module: CourseModule) => {
     return left.title.localeCompare(right.title, 'pt-BR')
   })
 }
+
+const sanitizeAssessmentForStudent = (assessment: Assessment): StudentAssessmentItem => ({
+  id: assessment.id,
+  slug: assessment.slug,
+  title: assessment.title,
+  description: assessment.description,
+  questionType: assessment.questionType,
+  passingScore: assessment.passingScore,
+  timeLimitInMinutes: assessment.timeLimitInMinutes,
+  questionCount: assessment.questions.length,
+  questions: assessment.questions.map((question) => ({
+    id: question.id,
+    prompt: question.prompt,
+    options: question.options.map((option) => ({
+      id: option.id,
+      label: option.label
+    }))
+  }))
+})
 
 const listCourseLessonProgress = async (userId: string, courseId: string) => {
   const lessonProgressSnapshot = await getFirebaseAdminCollection('lessonProgress').where('userId', '==', userId).get()
@@ -1055,6 +1340,66 @@ export const listAdminModulesForManagement = async (session: AuthSessionContext)
   return await listAdminModules()
 }
 
+export const listAdminAssessmentsForManagement = async (
+  session: AuthSessionContext,
+  filters?: {
+    courseId?: string
+    moduleId?: string
+  }
+) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const assessments = await listAdminAssessments()
+  const requestedCourseId = typeof filters?.courseId === 'string' ? filters.courseId.trim() : ''
+  const requestedModuleId = typeof filters?.moduleId === 'string' ? filters.moduleId.trim() : ''
+  const normalizedCourseSlug = requestedCourseId ? normalizeCourseSlug(requestedCourseId) : ''
+  const normalizedModuleSlug = requestedModuleId ? normalizeCourseSlug(requestedModuleId) : ''
+  const [resolvedCourse, resolvedModule] = await Promise.all([
+    requestedCourseId
+      ? (async () => {
+          const courseById = await getCourseById(requestedCourseId)
+
+          if (courseById) {
+            return courseById
+          }
+
+          return normalizedCourseSlug ? await getCourseBySlug(normalizedCourseSlug) : null
+        })()
+      : Promise.resolve(null),
+    requestedModuleId
+      ? (async () => {
+          const moduleById = await getModuleById(requestedModuleId)
+
+          if (moduleById) {
+            return moduleById
+          }
+
+          return normalizedModuleSlug ? await getModuleBySlug(normalizedModuleSlug) : null
+        })()
+      : Promise.resolve(null)
+  ])
+  const acceptedCourseIds = new Set(
+    [requestedCourseId, normalizedCourseSlug, resolvedCourse?.id || '', resolvedCourse?.slug || ''].filter(Boolean)
+  )
+  const acceptedModuleIds = new Set(
+    [requestedModuleId, normalizedModuleSlug, resolvedModule?.id || '', resolvedModule?.slug || ''].filter(Boolean)
+  )
+
+  return assessments.filter((assessment) => {
+    if (acceptedCourseIds.size > 0 && !acceptedCourseIds.has(assessment.courseId)) {
+      return false
+    }
+
+    if (acceptedModuleIds.size > 0 && !acceptedModuleIds.has(assessment.moduleId)) {
+      return false
+    }
+
+    return true
+  })
+}
+
 export const listAdminLessonsForManagement = async (
   session: AuthSessionContext,
   filters?: {
@@ -1173,6 +1518,26 @@ export const getAdminLessonBySlug = async (session: AuthSessionContext, lessonSl
   }
 
   return lesson
+}
+
+export const getAdminAssessmentBySlug = async (session: AuthSessionContext, assessmentSlug: string) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const normalizedSlug = normalizeCourseSlug(assessmentSlug)
+
+  if (!normalizedSlug) {
+    throw createHttpError(400, 'Informe um slug de avaliacao valido.')
+  }
+
+  const assessment = await getAssessmentBySlug(normalizedSlug)
+
+  if (!assessment || assessment.deletedAt) {
+    throw createHttpError(404, 'Avaliacao nao encontrada.')
+  }
+
+  return assessment
 }
 
 export const createAdminCourse = async (session: AuthSessionContext, input: AdminCourseInput) => {
@@ -1308,6 +1673,63 @@ export const createAdminLesson = async (session: AuthSessionContext, input: Admi
   return createdLesson
 }
 
+export const createAdminAssessment = async (session: AuthSessionContext, input: AdminAssessmentInput) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const normalizedCourseId = normalizeCourseSlug(input.courseId)
+  const normalizedModuleId = normalizeCourseSlug(input.moduleId)
+
+  if (!normalizedCourseId) {
+    throw createHttpError(400, 'Selecione um curso valido para a avaliacao.')
+  }
+
+  if (!normalizedModuleId) {
+    throw createHttpError(400, 'Selecione um modulo valido para a avaliacao.')
+  }
+
+  const [course, module] = await Promise.all([getCourseById(normalizedCourseId), getModuleById(normalizedModuleId)])
+
+  if (!course || course.deletedAt) {
+    throw createHttpError(404, 'Curso nao encontrado para vincular a avaliacao.')
+  }
+
+  if (!module || module.deletedAt || module.courseId !== course.id) {
+    throw createHttpError(404, 'Modulo nao encontrado para vincular a avaliacao.')
+  }
+
+  const existingAssessments = await listModuleAssessments(module)
+  const resolvedSlug = await resolveUniqueAdminAssessmentSlug(input)
+  const assessmentPayload = buildAdminAssessmentPayload(input, session.user.id, {
+    courseId: course.id,
+    moduleId: module.id,
+    resolvedSlug
+  })
+  const nextOrder = clampAssessmentOrder(existingAssessments.length + 1, existingAssessments.length + 1)
+  const orderedAssessments = [...existingAssessments]
+  orderedAssessments.splice(nextOrder - 1, 0, assessmentPayload)
+
+  await getFirebaseAdminCollection('assessments').doc(assessmentPayload.id).set(assessmentPayload)
+  const syncedAssessments = await syncModuleAssessmentsOrder(session, module, orderedAssessments)
+  const createdAssessment = syncedAssessments.find((assessment) => assessment.id === assessmentPayload.id) || assessmentPayload
+
+  await writeAdminLog(session, {
+    action: 'create',
+    targetCollection: 'assessments',
+    targetId: createdAssessment.id,
+    summary: `Avaliacao ${createdAssessment.title} criada no painel administrativo.`,
+    metadata: {
+      slug: createdAssessment.slug,
+      courseId: createdAssessment.courseId,
+      moduleId: createdAssessment.moduleId,
+      questionType: createdAssessment.questionType
+    }
+  })
+
+  return createdAssessment
+}
+
 export const updateAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string, input: AdminCourseInput) => {
   const existingCourse = await getAdminCourseBySlug(session, courseSlug)
   const coursePayload = buildAdminCoursePayload(input, session.user.id, { existingCourse })
@@ -1415,6 +1837,57 @@ export const updateAdminLessonBySlug = async (session: AuthSessionContext, lesso
   })
 
   return updatedLesson
+}
+
+export const updateAdminAssessmentBySlug = async (
+  session: AuthSessionContext,
+  assessmentSlug: string,
+  input: AdminAssessmentInput
+) => {
+  const existingAssessment = await getAdminAssessmentBySlug(session, assessmentSlug)
+  const [course, module] = await Promise.all([
+    getCourseById(existingAssessment.courseId),
+    getModuleById(existingAssessment.moduleId)
+  ])
+
+  if (!course || course.deletedAt) {
+    throw createHttpError(404, 'Curso da avaliacao nao encontrado.')
+  }
+
+  if (!module || module.deletedAt || module.courseId !== course.id) {
+    throw createHttpError(404, 'Modulo da avaliacao nao encontrado.')
+  }
+
+  const moduleAssessments = await listModuleAssessments(module)
+  const remainingAssessments = moduleAssessments.filter((assessment) => assessment.id !== existingAssessment.id)
+  const assessmentPayload = buildAdminAssessmentPayload(input, session.user.id, {
+    courseId: course.id,
+    moduleId: module.id,
+    existingAssessment
+  })
+  const nextOrder = clampAssessmentOrder(moduleAssessments.findIndex((assessment) => assessment.id === existingAssessment.id) + 1 || 1, remainingAssessments.length + 1)
+  const orderedAssessments = [...remainingAssessments]
+  orderedAssessments.splice(nextOrder - 1, 0, assessmentPayload)
+
+  await getFirebaseAdminCollection('assessments').doc(existingAssessment.id).set(assessmentPayload, { merge: true })
+  const syncedAssessments = await syncModuleAssessmentsOrder(session, module, orderedAssessments)
+  const updatedAssessment =
+    syncedAssessments.find((assessment) => assessment.id === existingAssessment.id) || assessmentPayload
+
+  await writeAdminLog(session, {
+    action: 'update',
+    targetCollection: 'assessments',
+    targetId: updatedAssessment.id,
+    summary: `Avaliacao ${updatedAssessment.title} atualizada no painel administrativo.`,
+    metadata: {
+      slug: updatedAssessment.slug,
+      courseId: updatedAssessment.courseId,
+      moduleId: updatedAssessment.moduleId,
+      questionType: updatedAssessment.questionType
+    }
+  })
+
+  return updatedAssessment
 }
 
 export const deleteAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string) => {
@@ -1546,6 +2019,53 @@ export const deleteAdminLessonBySlug = async (session: AuthSessionContext, lesso
   })
 
   return deletedLesson
+}
+
+export const deleteAdminAssessmentBySlug = async (session: AuthSessionContext, assessmentSlug: string) => {
+  const existingAssessment = await getAdminAssessmentBySlug(session, assessmentSlug)
+  const module = await getModuleById(existingAssessment.moduleId)
+
+  if (!module || module.deletedAt) {
+    throw createHttpError(404, 'Modulo da avaliacao nao encontrado.')
+  }
+
+  const now = toTimestamp()
+  const deletedAssessment = {
+    ...existingAssessment,
+    updatedAt: now,
+    deletedAt: now,
+    updatedBy: session.user.id,
+    deletedBy: session.user.id
+  }
+
+  await getFirebaseAdminCollection('assessments').doc(existingAssessment.id).set(
+    {
+      updatedAt: deletedAssessment.updatedAt,
+      deletedAt: deletedAssessment.deletedAt,
+      updatedBy: deletedAssessment.updatedBy,
+      deletedBy: deletedAssessment.deletedBy
+    },
+    { merge: true }
+  )
+
+  const remainingAssessments = (await listModuleAssessments(module)).filter(
+    (assessment) => assessment.id !== existingAssessment.id
+  )
+  await syncModuleAssessmentsOrder(session, module, remainingAssessments)
+
+  await writeAdminLog(session, {
+    action: 'delete',
+    targetCollection: 'assessments',
+    targetId: existingAssessment.id,
+    summary: `Avaliacao ${existingAssessment.title} removida no painel administrativo.`,
+    metadata: {
+      slug: existingAssessment.slug,
+      courseId: existingAssessment.courseId,
+      moduleId: existingAssessment.moduleId
+    }
+  })
+
+  return deletedAssessment
 }
 
 export const getHomeMetrics = async (session: AuthSessionContext): Promise<HomeMetricsData> => {
@@ -1697,6 +2217,44 @@ export const getAccessibleModuleDetailBySlugs = async (
     lessons,
     assessment: assessments[0] || null,
     progress: getModuleProgress(module, courseLessons, courseLessonProgress)
+  }
+}
+
+export const getAccessibleModuleAssessmentsBySlugs = async (
+  session: AuthSessionContext,
+  courseSlug: string,
+  moduleSlug: string
+): Promise<StudentModuleAssessmentData> => {
+  const moduleDetail = await getAccessibleModuleDetailBySlugs(session, courseSlug, moduleSlug)
+  const assessments = await listModuleAssessments(moduleDetail.module)
+  const progress = moduleDetail.progress
+
+  if (assessments.length === 0) {
+    return {
+      availability: 'not_created',
+      message: 'Este modulo ainda nao possui avaliacao cadastrada.',
+      assessments: [],
+      progress
+    }
+  }
+
+  if (progress.totalLessons > 0 && progress.completedLessons < progress.totalLessons) {
+    return {
+      availability: 'blocked_incomplete_lessons',
+      message: 'Finalize todas as aulas do modulo para liberar as avaliacoes.',
+      assessments: [],
+      progress
+    }
+  }
+
+  return {
+    availability: 'available',
+    message:
+      assessments.length === 1
+        ? 'A avaliacao deste modulo ja esta disponivel.'
+        : 'As avaliacoes deste modulo ja estao disponiveis.',
+    assessments: assessments.map(sanitizeAssessmentForStudent),
+    progress
   }
 }
 

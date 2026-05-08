@@ -527,7 +527,7 @@ const onDeleteRequest = () => {
       <form v-else class="section-stack" @submit.prevent="onSubmit">
         <div class="section-stack">
           <p class="body-copy">
-            {{ isEditing ? 'Curso, modulo e slug permanecem fixos para preservar a organizacao do Firestore e a navegacao do conteudo.' : 'O slug e gerado automaticamente a partir do titulo e a aula sera listada agrupada por curso e modulo.' }}
+            {{ isEditing ? 'Curso, modulo e slug permanecem fixos para preservar a organizacao do Firestore e a navegacao do conteudo. Nenhuma alteracao e persistida ate clicar em Salvar alteracoes.' : 'O slug e gerado automaticamente a partir do titulo e a aula sera listada agrupada por curso e modulo. Nenhuma alteracao e persistida ate clicar em Salvar alteracoes.' }}
           </p>
         </div>
 

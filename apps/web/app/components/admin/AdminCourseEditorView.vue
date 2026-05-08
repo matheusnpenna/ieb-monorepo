@@ -261,7 +261,7 @@ const uploadImageAsset = async (field: AssetField) => {
     }
 
     feedbackTone.value = 'success'
-    feedbackMessage.value = `Imagem de ${field === 'cover' ? 'capa' : 'hero'} enviada com sucesso.`
+    feedbackMessage.value = `Imagem de ${field === 'cover' ? 'capa' : 'hero'} enviada com sucesso. Clique em Salvar alteracoes para persistir no curso.`
     selectedFiles[field] = null
   } catch (error) {
     feedbackTone.value = 'error'
@@ -395,7 +395,7 @@ const onDeleteRequest = () => {
       <form v-else class="section-stack" @submit.prevent="onSubmit">
         <div class="section-stack">
           <p class="body-copy">
-            {{ isEditing ? 'O slug e mantido fixo porque identifica o documento do curso no Firestore.' : 'O slug e gerado automaticamente com base no titulo e validado antes do cadastro.' }}
+            {{ isEditing ? 'O slug e mantido fixo porque identifica o documento do curso no Firestore. Nenhuma alteracao e persistida ate clicar em Salvar alteracoes.' : 'O slug e gerado automaticamente com base no titulo e validado antes do cadastro. Nenhuma alteracao e persistida ate clicar em Salvar alteracoes.' }}
           </p>
         </div>
 

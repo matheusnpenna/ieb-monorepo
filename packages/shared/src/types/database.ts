@@ -12,6 +12,7 @@ export type EnrollmentStatus = 'pending' | 'active' | 'completed' | 'cancelled'
 export type CourseVisibility = 'draft' | 'published' | 'archived'
 export type LessonContentType = 'video' | 'text' | 'audio'
 export type VideoProvider = 'youtube' | 'vimeo' | 'upload' | 'embed'
+export type AssessmentQuestionType = 'multiple_choice' | 'free_text'
 export type HighlightKind = 'news' | 'course' | 'announcement'
 export type AdminActionType =
   | 'create'
@@ -126,6 +127,7 @@ export interface Assessment extends AuditedDocument {
   title: string
   slug: string
   description: string
+  questionType: AssessmentQuestionType
   passingScore: number
   timeLimitInMinutes: number | null
   questions: AssessmentQuestion[]

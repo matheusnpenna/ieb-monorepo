@@ -1,5 +1,6 @@
 import type {
   Assessment,
+  AssessmentQuestionType,
   Course,
   CourseModule,
   CourseVisibility,
@@ -87,6 +88,34 @@ export interface AdminLessonInput {
 
 export type AdminLessonsResponse = ApiResponse<Lesson[]>
 export type AdminLessonResponse = ApiResponse<Lesson | null>
+
+export interface AdminAssessmentQuestionOptionInput {
+  id: string
+  label: string
+  isCorrect: boolean
+}
+
+export interface AdminAssessmentQuestionInput {
+  id: string
+  prompt: string
+  explanation: string | null
+  options: AdminAssessmentQuestionOptionInput[]
+}
+
+export interface AdminAssessmentInput {
+  courseId: string
+  moduleId: string
+  title: string
+  slug: string
+  description: string
+  questionType: AssessmentQuestionType
+  passingScore: number
+  timeLimitInMinutes: number | null
+  questions: AdminAssessmentQuestionInput[]
+}
+
+export type AdminAssessmentsResponse = ApiResponse<Assessment[]>
+export type AdminAssessmentResponse = ApiResponse<Assessment | null>
 
 export interface AdminUploadedImageData {
   url: string
@@ -189,3 +218,35 @@ export interface LessonCommentItem {
 
 export type LessonCommentsResponse = ApiResponse<LessonCommentItem[]>
 export type LessonCommentResponse = ApiResponse<LessonCommentItem | null>
+
+export interface StudentAssessmentQuestionOption {
+  id: string
+  label: string
+}
+
+export interface StudentAssessmentQuestion {
+  id: string
+  prompt: string
+  options: StudentAssessmentQuestionOption[]
+}
+
+export interface StudentAssessmentItem {
+  id: string
+  slug: string
+  title: string
+  description: string
+  questionType: AssessmentQuestionType
+  passingScore: number
+  timeLimitInMinutes: number | null
+  questionCount: number
+  questions: StudentAssessmentQuestion[]
+}
+
+export interface StudentModuleAssessmentData {
+  availability: 'not_created' | 'blocked_incomplete_lessons' | 'available'
+  message: string
+  assessments: StudentAssessmentItem[]
+  progress: ModuleDetailProgress
+}
+
+export type StudentModuleAssessmentResponse = ApiResponse<StudentModuleAssessmentData | null>
