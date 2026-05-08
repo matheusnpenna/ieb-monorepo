@@ -13,17 +13,22 @@ vi.mock('../../../server/utils/firebase-admin', () => ({
 
 import {
   createAdminCourse,
+  createAdminModule,
   deleteAdminCourseBySlug,
+  deleteAdminModuleBySlug,
   getAccessibleCourseDetailBySlug,
   getAccessibleModuleDetailBySlugs,
   getAccessibleLessonDetailBySlugs,
   getAdminCourseBySlug,
+  getAdminModuleBySlug,
   getHomeMetrics,
   listAccessibleCourses,
   listAdminCoursesForManagement,
+  listAdminModulesForManagement,
   listLessonCommentsBySlugs,
   markLessonAsCompletedBySlugs,
   updateAdminCourseBySlug,
+  updateAdminModuleBySlug,
   updateLessonProgressBySlugs,
   createLessonCommentBySlugs,
   updateLessonCommentBySlugs,
@@ -546,6 +551,344 @@ describe('admin course management', () => {
         targetId: createdCourse.slug
       })
     )
+  })
+})
+
+describe('admin module management', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const adminSession = {
+    user: {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      fullName: 'Admin User',
+      role: 'admin' as const,
+      status: 'active' as const,
+      region: 'feira-de-santana' as const,
+      avatarUrl: null
+    },
+    issuedAt: '2026-05-07T00:00:00.000Z'
+  }
+
+  it('lists admin modules for management ordered by course and order', async () => {
+    const moduleOne = buildModule({
+      id: 'modulo-b',
+      courseId: 'curso-1',
+      title: 'Modulo B',
+      slug: 'modulo-b',
+      order: 2
+    })
+    const moduleTwo = buildModule({
+      id: 'modulo-a',
+      courseId: 'curso-1',
+      title: 'Modulo A',
+      slug: 'modulo-a',
+      order: 1
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'modules') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [createDocumentSnapshot(moduleOne), createDocumentSnapshot(moduleTwo)]
+          })
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const modules = await listAdminModulesForManagement(adminSession)
+
+    expect(modules.map((module) => module.slug)).toEqual(['modulo-a', 'modulo-b'])
+  })
+
+  it('creates, updates, loads and soft deletes a module while syncing the course order', async () => {
+    const adminLogSet = vi.fn().mockResolvedValue(undefined)
+    const storedCourses = new Map<string, Course>()
+    const storedModules = new Map<string, CourseModule>()
+    const baseCourse = buildCourse({
+      id: 'teologia-basica',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica',
+      moduleIds: []
+    })
+
+    storedCourses.set(baseCourse.id, baseCourse)
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [...storedCourses.values()].map(createDocumentSnapshot)
+          }),
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [] })
+          })),
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedCourses.has(documentId)
+                ? createDocumentSnapshot(storedCourses.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingCourse = storedCourses.get(documentId)
+              const nextCourse =
+                options?.merge && existingCourse
+                  ? ({ ...existingCourse, ...(payload as Partial<Course>), id: documentId } as Course)
+                  : ({ ...(payload as Course), id: documentId } as Course)
+
+              storedCourses.set(documentId, nextCourse)
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          get: vi.fn().mockResolvedValue({
+            docs: [...storedModules.values()].map(createDocumentSnapshot)
+          }),
+          where: vi.fn((fieldName: string, _operator: string, courseId: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'courseId'
+                  ? [...storedModules.values()]
+                      .filter((module) => module.courseId === courseId)
+                      .map(createDocumentSnapshot)
+                  : []
+            })
+          })),
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedModules.has(documentId)
+                ? createDocumentSnapshot(storedModules.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingModule = storedModules.get(documentId)
+              const nextModule =
+                options?.merge && existingModule
+                  ? ({ ...existingModule, ...(payload as Partial<CourseModule>), id: documentId } as CourseModule)
+                  : ({ ...(existingModule || {}), ...(payload as Partial<CourseModule>), id: documentId } as CourseModule)
+
+              storedModules.set(documentId, nextModule)
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'adminLogs') {
+        return {
+          doc: vi.fn(() => ({
+            id: 'log-1',
+            set: adminLogSet
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const createdModule = await createAdminModule(adminSession, {
+      courseId: baseCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: 'fundamentos-da-fe',
+      description: 'Bases do curso',
+      order: 1,
+      estimatedDurationInMinutes: 90
+    })
+
+    expect(createdModule.slug).toBe('fundamentos-da-fe')
+    expect(storedCourses.get(baseCourse.id)?.moduleIds).toEqual(['fundamentos-da-fe'])
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'create',
+        targetCollection: 'modules',
+        targetId: 'fundamentos-da-fe'
+      })
+    )
+
+    const loadedModule = await getAdminModuleBySlug(adminSession, 'fundamentos-da-fe')
+    expect(loadedModule.title).toBe('Fundamentos da Fe')
+
+    const updatedModule = await updateAdminModuleBySlug(adminSession, 'fundamentos-da-fe', {
+      courseId: baseCourse.id,
+      title: 'Fundamentos revisados',
+      slug: 'fundamentos-da-fe',
+      description: 'Bases revisadas do curso',
+      order: 1,
+      estimatedDurationInMinutes: 120
+    })
+
+    expect(updatedModule.title).toBe('Fundamentos revisados')
+    expect(updatedModule.estimatedDurationInMinutes).toBe(120)
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'update',
+        targetCollection: 'modules',
+        targetId: 'fundamentos-da-fe'
+      })
+    )
+
+    const deletedModule = await deleteAdminModuleBySlug(adminSession, 'fundamentos-da-fe')
+
+    expect(deletedModule.deletedAt).toBeTruthy()
+    expect(storedCourses.get(baseCourse.id)?.moduleIds).toEqual([])
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'delete',
+        targetCollection: 'modules',
+        targetId: 'fundamentos-da-fe'
+      })
+    )
+  })
+
+  it('creates a unique slug automatically when a module with the same base slug already exists', async () => {
+    const adminLogSet = vi.fn().mockResolvedValue(undefined)
+    const baseCourse = buildCourse({
+      id: 'teologia-basica',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica',
+      moduleIds: ['fundamentos-da-fe']
+    })
+    const existingModule = buildModule({
+      id: 'fundamentos-da-fe',
+      courseId: baseCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: 'fundamentos-da-fe'
+    })
+    const storedCourses = new Map<string, Course>([[baseCourse.id, baseCourse]])
+    const storedModules = new Map<string, CourseModule>([[existingModule.id, existingModule]])
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'courses') {
+        return {
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedCourses.has(documentId)
+                ? createDocumentSnapshot(storedCourses.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>, options?: { merge?: boolean }) => {
+              if (!documentId) {
+                return
+              }
+
+              const existingCourse = storedCourses.get(documentId)
+              const nextCourse =
+                options?.merge && existingCourse
+                  ? ({ ...existingCourse, ...(payload as Partial<Course>), id: documentId } as Course)
+                  : ({ ...(payload as Course), id: documentId } as Course)
+
+              storedCourses.set(documentId, nextCourse)
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'modules') {
+        return {
+          where: vi.fn((_fieldName: string, _operator: string, courseId: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: [...storedModules.values()]
+                .filter((module) => module.courseId === courseId)
+                .map(createDocumentSnapshot)
+            })
+          })),
+          doc: vi.fn((documentId?: string) => ({
+            get: vi.fn().mockResolvedValue(
+              documentId && storedModules.has(documentId)
+                ? createDocumentSnapshot(storedModules.get(documentId)!)
+                : { exists: false }
+            ),
+            set: vi.fn(async (payload: Record<string, unknown>) => {
+              if (documentId) {
+                storedModules.set(documentId, payload as CourseModule)
+              }
+            })
+          }))
+        }
+      }
+
+      if (collectionName === 'adminLogs') {
+        return {
+          doc: vi.fn(() => ({
+            id: 'log-1',
+            set: adminLogSet
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const createdModule = await createAdminModule(adminSession, {
+      courseId: baseCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: '',
+      description: 'Nova descricao',
+      order: 2,
+      estimatedDurationInMinutes: 60
+    })
+
+    expect(createdModule.slug).toMatch(/^\d{4}-fundamentos-da-fe$/)
+    expect(createdModule.slug).not.toBe('fundamentos-da-fe')
+    expect(adminLogSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetId: createdModule.slug
+      })
+    )
+  })
+
+  it('loads a legacy module by slug even when the document id is different', async () => {
+    const baseCourse = buildCourse({
+      id: 'teologia-basica',
+      title: 'Teologia Basica',
+      slug: 'teologia-basica',
+      moduleIds: ['module-doc-1']
+    })
+    const legacyModule = buildModule({
+      id: 'module-doc-1',
+      courseId: baseCourse.id,
+      title: 'Fundamentos da Fe',
+      slug: 'fundamentos-da-fe'
+    })
+
+    getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
+      if (collectionName === 'modules') {
+        return {
+          doc: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ exists: false })
+          })),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: string) => ({
+            get: vi.fn().mockResolvedValue({
+              docs:
+                fieldName === 'slug' && fieldValue === legacyModule.slug
+                  ? [createDocumentSnapshot(legacyModule)]
+                  : []
+            })
+          }))
+        }
+      }
+
+      throw new Error(`Unexpected collection ${collectionName}`)
+    })
+
+    const loadedModule = await getAdminModuleBySlug(adminSession, 'fundamentos-da-fe')
+
+    expect(loadedModule.id).toBe('module-doc-1')
+    expect(loadedModule.slug).toBe('fundamentos-da-fe')
   })
 })
 

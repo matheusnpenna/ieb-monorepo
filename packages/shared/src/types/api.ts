@@ -49,6 +49,18 @@ export interface AdminCourseInput {
 export type AdminCoursesResponse = ApiResponse<Course[]>
 export type AdminCourseResponse = ApiResponse<Course | null>
 
+export interface AdminModuleInput {
+  courseId: string
+  title: string
+  slug: string
+  description: string
+  order: number
+  estimatedDurationInMinutes: number
+}
+
+export type AdminModulesResponse = ApiResponse<CourseModule[]>
+export type AdminModuleResponse = ApiResponse<CourseModule | null>
+
 export interface AdminUploadedImageData {
   url: string
   path: string

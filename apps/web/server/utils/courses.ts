@@ -1,5 +1,6 @@
 import type {
   AdminCourseInput,
+  AdminModuleInput,
   Assessment,
   AuthSessionContext,
   Course,
@@ -128,6 +129,25 @@ const listAdminCourses = async () => {
   return sortCoursesByTitle(snapshot.docs.map(toCourseDocument).filter(isAccessibleAdminCourse))
 }
 
+const listAdminModules = async () => {
+  const snapshot = await getFirebaseAdminCollection('modules').get()
+
+  return snapshot.docs
+    .map(toModuleDocument)
+    .filter((module) => !module.deletedAt)
+    .sort((left, right) => {
+      if (left.courseId !== right.courseId) {
+        return left.courseId.localeCompare(right.courseId, 'pt-BR')
+      }
+
+      if (left.order !== right.order) {
+        return left.order - right.order
+      }
+
+      return left.title.localeCompare(right.title, 'pt-BR')
+    })
+}
+
 const getCourseById = async (courseId: string) => {
   const snapshot = await getFirebaseAdminCollection('courses').doc(courseId).get()
 
@@ -206,6 +226,108 @@ const resolveUniqueAdminCourseSlug = async (input: AdminCourseInput) => {
   throw createHttpError(500, 'Nao foi possivel gerar um slug unico para o curso.')
 }
 
+const getModuleById = async (moduleId: string) => {
+  const snapshot = await getFirebaseAdminCollection('modules').doc(moduleId).get()
+
+  if (!snapshot.exists) {
+    return null
+  }
+
+  return toModuleDocument(snapshot)
+}
+
+const getModuleBySlug = async (moduleSlug: string) => {
+  const moduleById = await getModuleById(moduleSlug)
+
+  if (moduleById) {
+    return moduleById
+  }
+
+  const snapshot = await getFirebaseAdminCollection('modules').where('slug', '==', moduleSlug).get()
+  const legacyModuleSnapshot = snapshot.docs.find((document) => {
+    const module = toModuleDocument(document)
+
+    return !module.deletedAt
+  })
+
+  return legacyModuleSnapshot ? toModuleDocument(legacyModuleSnapshot) : null
+}
+
+const assertAdminModulePayload = (
+  input: AdminModuleInput,
+  options?: {
+    existingModule?: CourseModule | null
+    resolvedSlug?: string
+  }
+) => {
+  const existingModule = options?.existingModule || null
+  const normalizedCourseId = normalizeCourseSlug(input.courseId)
+  const normalizedSlug = normalizeCourseSlug(options?.resolvedSlug || input.slug || input.title)
+
+  if (!normalizedCourseId) {
+    throw createHttpError(400, 'Selecione um curso valido para o modulo.')
+  }
+
+  if (existingModule && normalizedCourseId !== existingModule.courseId) {
+    throw createHttpError(400, 'O curso do modulo nao pode ser alterado apos a criacao.')
+  }
+
+  if (!input.title.trim()) {
+    throw createHttpError(400, 'Informe o titulo do modulo.')
+  }
+
+  if (!normalizedSlug || !COURSE_SLUG_REGEX.test(normalizedSlug)) {
+    throw createHttpError(400, 'Informe um slug de modulo valido.')
+  }
+
+  if (existingModule && normalizedSlug !== existingModule.slug) {
+    throw createHttpError(400, 'O slug do modulo nao pode ser alterado apos a criacao.')
+  }
+
+  if (!input.description.trim()) {
+    throw createHttpError(400, 'Informe a descricao do modulo.')
+  }
+
+  if (!Number.isFinite(input.order) || input.order < 1) {
+    throw createHttpError(400, 'Informe uma ordem valida para o modulo.')
+  }
+
+  if (!Number.isFinite(input.estimatedDurationInMinutes) || input.estimatedDurationInMinutes < 0) {
+    throw createHttpError(400, 'Informe uma duracao estimada valida para o modulo.')
+  }
+
+  return {
+    courseId: normalizedCourseId,
+    slug: normalizedSlug
+  }
+}
+
+const resolveUniqueAdminModuleSlug = async (input: AdminModuleInput) => {
+  const baseSlug = normalizeCourseSlug(input.slug || input.title)
+
+  if (!baseSlug || !COURSE_SLUG_REGEX.test(baseSlug)) {
+    throw createHttpError(400, 'Informe um slug de modulo valido.')
+  }
+
+  const existingBaseModule = await getModuleById(baseSlug)
+
+  if (!existingBaseModule) {
+    return baseSlug
+  }
+
+  for (let salt = 0; salt < 50; salt += 1) {
+    const hash = createFourDigitSlugHash(baseSlug, salt)
+    const nextSlug = `${hash}-${baseSlug}`
+    const existingModule = await getModuleById(nextSlug)
+
+    if (!existingModule) {
+      return nextSlug
+    }
+  }
+
+  throw createHttpError(500, 'Nao foi possivel gerar um slug unico para o modulo.')
+}
+
 const buildAdminCoursePayload = (
   input: AdminCourseInput,
   actorUserId: string,
@@ -238,6 +360,41 @@ const buildAdminCoursePayload = (
     createdBy: existingCourse?.createdBy || actorUserId,
     updatedBy: actorUserId,
     deletedBy: existingCourse?.deletedBy ?? null
+  }
+}
+
+const buildAdminModulePayload = (
+  input: AdminModuleInput,
+  actorUserId: string,
+  options: {
+    courseId: string
+    existingModule?: CourseModule | null
+    resolvedSlug?: string
+  }
+): CourseModule => {
+  const existingModule = options.existingModule || null
+  const now = toTimestamp()
+  const normalizedPayload = assertAdminModulePayload(input, {
+    existingModule,
+    resolvedSlug: options.resolvedSlug
+  })
+
+  return {
+    id: normalizedPayload.slug,
+    courseId: options.courseId,
+    title: input.title.trim(),
+    slug: normalizedPayload.slug,
+    description: input.description.trim(),
+    order: Math.max(1, Math.floor(input.order)),
+    lessonIds: existingModule?.lessonIds || [],
+    assessmentIds: existingModule?.assessmentIds || [],
+    estimatedDurationInMinutes: Math.max(0, Math.floor(input.estimatedDurationInMinutes)),
+    createdAt: existingModule?.createdAt || now,
+    updatedAt: now,
+    deletedAt: existingModule?.deletedAt ?? null,
+    createdBy: existingModule?.createdBy || actorUserId,
+    updatedBy: actorUserId,
+    deletedBy: existingModule?.deletedBy ?? null
   }
 }
 
@@ -283,6 +440,50 @@ const listCourseModules = async (course: Course) => {
 
     return left.order - right.order
   })
+}
+
+const clampModuleOrder = (value: number, totalModules: number) => {
+  const normalizedValue = Math.max(1, Math.floor(value || 1))
+
+  return Math.min(normalizedValue, Math.max(1, totalModules))
+}
+
+const syncCourseModulesOrder = async (
+  session: AuthSessionContext,
+  course: Course,
+  modules: CourseModule[]
+) => {
+  const now = toTimestamp()
+  const orderedModules = [...modules].map((module, index) => ({
+    ...module,
+    order: index + 1,
+    updatedAt: now,
+    updatedBy: session.user.id
+  }))
+
+  await Promise.all(
+    orderedModules.map((module) =>
+      getFirebaseAdminCollection('modules').doc(module.id).set(
+        {
+          order: module.order,
+          updatedAt: module.updatedAt,
+          updatedBy: module.updatedBy
+        },
+        { merge: true }
+      )
+    )
+  )
+
+  await getFirebaseAdminCollection('courses').doc(course.id).set(
+    {
+      moduleIds: orderedModules.map((module) => module.id),
+      updatedAt: now,
+      updatedBy: session.user.id
+    },
+    { merge: true }
+  )
+
+  return orderedModules
 }
 
 const listCourseLessons = async (course: Course) => {
@@ -600,6 +801,14 @@ export const listAdminCoursesForManagement = async (session: AuthSessionContext)
   return await listAdminCourses()
 }
 
+export const listAdminModulesForManagement = async (session: AuthSessionContext) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  return await listAdminModules()
+}
+
 export const getAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string) => {
   if (session.user.role !== 'admin') {
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
@@ -618,6 +827,26 @@ export const getAdminCourseBySlug = async (session: AuthSessionContext, courseSl
   }
 
   return course
+}
+
+export const getAdminModuleBySlug = async (session: AuthSessionContext, moduleSlug: string) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const normalizedSlug = normalizeCourseSlug(moduleSlug)
+
+  if (!normalizedSlug) {
+    throw createHttpError(400, 'Informe um slug de modulo valido.')
+  }
+
+  const module = await getModuleBySlug(normalizedSlug)
+
+  if (!module || module.deletedAt) {
+    throw createHttpError(404, 'Modulo nao encontrado.')
+  }
+
+  return module
 }
 
 export const createAdminCourse = async (session: AuthSessionContext, input: AdminCourseInput) => {
@@ -643,6 +872,55 @@ export const createAdminCourse = async (session: AuthSessionContext, input: Admi
   return coursePayload
 }
 
+export const createAdminModule = async (session: AuthSessionContext, input: AdminModuleInput) => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const normalizedCourseId = normalizeCourseSlug(input.courseId)
+
+  if (!normalizedCourseId) {
+    throw createHttpError(400, 'Selecione um curso valido para o modulo.')
+  }
+
+  const course = await getCourseById(normalizedCourseId)
+
+  if (!course || course.deletedAt) {
+    throw createHttpError(404, 'Curso nao encontrado para vincular o modulo.')
+  }
+
+  const existingModules = await listCourseModules(course)
+  const resolvedSlug = await resolveUniqueAdminModuleSlug(input)
+  const modulePayload = buildAdminModulePayload(input, session.user.id, {
+    courseId: course.id,
+    resolvedSlug
+  })
+  const nextOrder = clampModuleOrder(modulePayload.order, existingModules.length + 1)
+  const orderedModules = [...existingModules]
+  orderedModules.splice(nextOrder - 1, 0, {
+    ...modulePayload,
+    order: nextOrder
+  })
+
+  await getFirebaseAdminCollection('modules').doc(modulePayload.id).set(modulePayload)
+  const syncedModules = await syncCourseModulesOrder(session, course, orderedModules)
+  const createdModule = syncedModules.find((module) => module.id === modulePayload.id) || modulePayload
+
+  await writeAdminLog(session, {
+    action: 'create',
+    targetCollection: 'modules',
+    targetId: createdModule.id,
+    summary: `Modulo ${createdModule.title} criado no painel administrativo.`,
+    metadata: {
+      slug: createdModule.slug,
+      courseId: createdModule.courseId,
+      order: createdModule.order
+    }
+  })
+
+  return createdModule
+}
+
 export const updateAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string, input: AdminCourseInput) => {
   const existingCourse = await getAdminCourseBySlug(session, courseSlug)
   const coursePayload = buildAdminCoursePayload(input, session.user.id, { existingCourse })
@@ -660,6 +938,46 @@ export const updateAdminCourseBySlug = async (session: AuthSessionContext, cours
   })
 
   return coursePayload
+}
+
+export const updateAdminModuleBySlug = async (session: AuthSessionContext, moduleSlug: string, input: AdminModuleInput) => {
+  const existingModule = await getAdminModuleBySlug(session, moduleSlug)
+  const course = await getCourseById(existingModule.courseId)
+
+  if (!course || course.deletedAt) {
+    throw createHttpError(404, 'Curso do modulo nao encontrado.')
+  }
+
+  const courseModules = await listCourseModules(course)
+  const remainingModules = courseModules.filter((module) => module.id !== existingModule.id)
+  const modulePayload = buildAdminModulePayload(input, session.user.id, {
+    courseId: course.id,
+    existingModule
+  })
+  const nextOrder = clampModuleOrder(modulePayload.order, remainingModules.length + 1)
+  const orderedModules = [...remainingModules]
+  orderedModules.splice(nextOrder - 1, 0, {
+    ...modulePayload,
+    order: nextOrder
+  })
+
+  await getFirebaseAdminCollection('modules').doc(existingModule.id).set(modulePayload, { merge: true })
+  const syncedModules = await syncCourseModulesOrder(session, course, orderedModules)
+  const updatedModule = syncedModules.find((module) => module.id === existingModule.id) || modulePayload
+
+  await writeAdminLog(session, {
+    action: 'update',
+    targetCollection: 'modules',
+    targetId: updatedModule.id,
+    summary: `Modulo ${updatedModule.title} atualizado no painel administrativo.`,
+    metadata: {
+      slug: updatedModule.slug,
+      courseId: updatedModule.courseId,
+      order: updatedModule.order
+    }
+  })
+
+  return updatedModule
 }
 
 export const deleteAdminCourseBySlug = async (session: AuthSessionContext, courseSlug: string) => {
@@ -694,6 +1012,50 @@ export const deleteAdminCourseBySlug = async (session: AuthSessionContext, cours
   })
 
   return deletedCourse
+}
+
+export const deleteAdminModuleBySlug = async (session: AuthSessionContext, moduleSlug: string) => {
+  const existingModule = await getAdminModuleBySlug(session, moduleSlug)
+  const course = await getCourseById(existingModule.courseId)
+
+  if (!course || course.deletedAt) {
+    throw createHttpError(404, 'Curso do modulo nao encontrado.')
+  }
+
+  const now = toTimestamp()
+  const deletedModule = {
+    ...existingModule,
+    updatedAt: now,
+    deletedAt: now,
+    updatedBy: session.user.id,
+    deletedBy: session.user.id
+  }
+
+  await getFirebaseAdminCollection('modules').doc(existingModule.id).set(
+    {
+      updatedAt: deletedModule.updatedAt,
+      deletedAt: deletedModule.deletedAt,
+      updatedBy: deletedModule.updatedBy,
+      deletedBy: deletedModule.deletedBy
+    },
+    { merge: true }
+  )
+
+  const remainingModules = (await listCourseModules(course)).filter((module) => module.id !== existingModule.id)
+  await syncCourseModulesOrder(session, course, remainingModules)
+
+  await writeAdminLog(session, {
+    action: 'delete',
+    targetCollection: 'modules',
+    targetId: existingModule.id,
+    summary: `Modulo ${existingModule.title} removido no painel administrativo.`,
+    metadata: {
+      slug: existingModule.slug,
+      courseId: existingModule.courseId
+    }
+  })
+
+  return deletedModule
 }
 
 export const getHomeMetrics = async (session: AuthSessionContext): Promise<HomeMetricsData> => {
