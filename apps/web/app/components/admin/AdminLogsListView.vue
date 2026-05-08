@@ -72,7 +72,11 @@ const logsPage = computed(() => {
   return logsResponse.value.data
 })
 
-const logItems = computed(() => logsPage.value?.items || [])
+const logItems = computed(() =>
+  [...(logsPage.value?.items || [])].sort(
+    (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+  )
+)
 const logsErrorMessage = computed(() => {
   if (!logsResponse.value || logsResponse.value.status !== 'error') {
     return ''
@@ -163,24 +167,21 @@ const goToPreviousPage = () => {
         <ul v-else class="list-clean logs-list">
           <li v-for="log in logItems" :key="log.id">
             <SurfaceCard as="article">
-              <div class="section-stack log-card">
+              <div class="log-card">
                 <div class="log-card-header">
-                  <div class="section-stack log-card-copy">
-                    <div class="log-card-meta">
-                      <span class="pill">{{ actionLabelMap[log.action] }}</span>
-                      <span class="body-copy">{{ formatCollectionName(log.targetCollection) }}</span>
-                      <span class="body-copy">{{ formatTimestamp(log.createdAt) }}</span>
-                    </div>
-                    <h2 class="section-title log-card-title">{{ log.summary }}</h2>
-                    <p class="body-copy">
-                      Ator: {{ log.actorEmail }}
-                    </p>
+                  <div class="log-card-meta">
+                    <span class="pill">{{ actionLabelMap[log.action] }}</span>
+                    <span class="body-copy">{{ formatCollectionName(log.targetCollection) }}</span>
+                    <span class="body-copy">{{ formatTimestamp(log.createdAt) }}</span>
                   </div>
+                  <span class="body-copy log-card-target">{{ log.targetId }}</span>
                 </div>
 
+                <h2 class="section-title log-card-title">{{ log.summary }}</h2>
+
                 <div class="log-card-footer">
-                  <span class="body-copy">Alvo: {{ log.targetId }}</span>
-                  <span class="body-copy">ID do log: {{ log.id }}</span>
+                  <span class="body-copy">Ator: {{ log.actorEmail }}</span>
+                  <span class="body-copy">ID: {{ log.id }}</span>
                 </div>
 
                 <details class="log-metadata" v-if="Object.keys(log.metadata).length > 0">
@@ -213,54 +214,68 @@ const goToPreviousPage = () => {
 
 .logs-list {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .log-card {
-  gap: 1rem;
-}
-
-.log-card-copy {
-  gap: 0.75rem;
+  display: grid;
+  gap: 0.65rem;
 }
 
 .log-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.log-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
   align-items: center;
 }
 
 .log-card-title {
-  font-size: 1.2rem;
+  font-size: 1rem;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .log-card-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
   color: var(--ds-muted);
+  font-size: 0.9rem;
+}
+
+.log-card-target {
+  color: var(--ds-muted);
+  font-size: 0.85rem;
 }
 
 .log-metadata {
   border-top: 1px solid var(--ds-border);
-  padding-top: 1rem;
+  padding-top: 0.75rem;
 }
 
 .log-metadata summary {
   cursor: pointer;
   color: var(--ds-text);
+  font-size: 0.9rem;
 }
 
 .log-metadata pre {
   overflow-x: auto;
-  margin: 0.85rem 0 0;
-  padding: 1rem;
-  border-radius: 18px;
+  margin: 0.6rem 0 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--ds-muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
+  font-size: 0.8rem;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
 }
