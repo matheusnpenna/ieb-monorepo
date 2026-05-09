@@ -125,9 +125,19 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 ## Grid de cursos
 
 - `CourseGrid` e o padrao oficial para vitrines de cursos em formato de cards.
-- Cada card deve exibir capa, titulo, descricao curta, slug e meta resumida do curso.
+- Cada card deve exibir capa, titulo, descricao curta e meta resumida do curso.
 - O hover da capa deve ampliar somente a imagem interna, sem aumentar o tamanho externo do card.
 - Quando `coverImageUrl` estiver ausente, usar o fallback `app/assets/img/logos/videira-logo.svg`.
+
+## Destaques da home
+
+- `FeaturedBanner` e a primitiva visual para blocos de destaque editoriais.
+- `HomeHighlightsCarousel` concentra a logica de consumo do endpoint da home e o comportamento de carrossel.
+- Quando existir apenas um destaque ativo, a home deve mostrar um banner unico sem controles.
+- Quando existir mais de um destaque ativo, a home deve mostrar um carrossel com navegacao entre os destaques.
+- Cada destaque pode exibir titulo, descricao, lista de botoes de acao e uma unica midia opcional.
+- A midia opcional pode ser imagem ou video.
+- Videos em destaque devem aceitar link direto, YouTube ou Vimeo.
 
 ## Player de aula
 

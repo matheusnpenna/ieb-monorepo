@@ -1,4 +1,5 @@
 import type {
+  ButtonVariant,
   AdminActivityLog,
   Assessment,
   AssessmentQuestionType,
@@ -6,8 +7,11 @@ import type {
   Course,
   CourseModule,
   CourseVisibility,
+  HighlightActionTarget,
+  HighlightMediaType,
   Lesson,
   LessonContentType,
+  PlatformHighlight,
   User,
   UserRegion,
   UserRole,
@@ -170,6 +174,28 @@ export interface AdminLogsData {
 }
 
 export type AdminLogsResponse = ApiResponse<AdminLogsData | null>
+
+export interface AdminHighlightActionInput {
+  id: string
+  label: string
+  href: string
+  target: HighlightActionTarget
+  variant: ButtonVariant
+}
+
+export interface AdminHighlightInput {
+  title: string
+  description: string
+  isActive: boolean
+  mediaType: HighlightMediaType | null
+  mediaUrl: string | null
+  actions: AdminHighlightActionInput[]
+  order: number
+}
+
+export type AdminHighlightsResponse = ApiResponse<PlatformHighlight[]>
+export type AdminHighlightResponse = ApiResponse<PlatformHighlight | null>
+export type HomeHighlightsResponse = ApiResponse<PlatformHighlight[]>
 
 export interface CourseDetailActionLinks {
   startCourseHref: string | null

@@ -14,6 +14,9 @@ export type LessonContentType = 'video' | 'text' | 'audio'
 export type VideoProvider = 'youtube' | 'vimeo' | 'upload' | 'embed'
 export type AssessmentQuestionType = 'multiple_choice' | 'free_text'
 export type HighlightKind = 'news' | 'course' | 'announcement'
+export type HighlightMediaType = 'image' | 'video'
+export type HighlightActionTarget = '_self' | '_blank'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'success'
 export type AdminActionType =
   | 'create'
   | 'update'
@@ -188,9 +191,16 @@ export interface PlatformHighlight extends AuditedDocument {
   kind: HighlightKind
   title: string
   description: string
-  imageUrl: string | null
-  ctaLabel: string | null
-  ctaHref: string | null
+  isActive: boolean
+  mediaType: HighlightMediaType | null
+  mediaUrl: string | null
+  actions: Array<{
+    id: string
+    label: string
+    href: string
+    target: HighlightActionTarget
+    variant: ButtonVariant
+  }>
   order: number
   publishedAt: TimestampValue | null
 }
