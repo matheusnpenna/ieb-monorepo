@@ -23,6 +23,14 @@ interface PlayerProgressPayload {
   ended: boolean
 }
 
+interface StoredLessonProgress {
+  lastPositionInSeconds: number
+  watchedMinutes: number
+  completionRate: number
+  isCompleted: boolean
+  updatedAt: string
+}
+
 const route = useRoute()
 const courseSlug = computed(() => String(route.params.courseSlug ?? ''))
 const moduleSlug = computed(() => String(route.params.moduleSlug ?? ''))
@@ -56,6 +64,9 @@ const lessonDetail = computed(() => {
 
 const lesson = computed(() => lessonDetail.value?.lesson || null)
 const moduleData = computed(() => lessonDetail.value?.module || null)
+const progressStorageKey = computed(() =>
+  `lesson-progress:${courseSlug.value}:${moduleSlug.value}:${lessonSlug.value}`
+)
 
 const lessonErrorMessage = computed(() => {
   if (!lessonDetailResponse.value || lessonDetailResponse.value.status !== 'error') {
@@ -67,10 +78,76 @@ const lessonErrorMessage = computed(() => {
 
 const lessonProgressState = ref<LessonDetailProgress | null>(null)
 
+const readStoredProgress = () => {
+  if (!import.meta.client) {
+    return null
+  }
+
+  try {
+    const storedValue = window.sessionStorage.getItem(progressStorageKey.value)
+
+    return storedValue ? (JSON.parse(storedValue) as StoredLessonProgress) : null
+  } catch {
+    return null
+  }
+}
+
+const writeStoredProgress = (progress: LessonDetailProgress) => {
+  if (!import.meta.client) {
+    return
+  }
+
+  const storedProgress: StoredLessonProgress = {
+    ...progress,
+    updatedAt: new Date().toISOString()
+  }
+
+  window.sessionStorage.setItem(progressStorageKey.value, JSON.stringify(storedProgress))
+}
+
+const mergeProgressWithStoredPosition = (progress: LessonDetailProgress | null) => {
+  const storedProgress = readStoredProgress()
+
+  if (!storedProgress || storedProgress.lastPositionInSeconds <= (progress?.lastPositionInSeconds || 0)) {
+    return progress ? { ...progress } : null
+  }
+
+  return {
+    lastPositionInSeconds: storedProgress.lastPositionInSeconds,
+    watchedMinutes: Math.max(progress?.watchedMinutes || 0, storedProgress.watchedMinutes),
+    completionRate: Math.max(progress?.completionRate || 0, storedProgress.completionRate),
+    isCompleted: Boolean(progress?.isCompleted || storedProgress.isCompleted)
+  }
+}
+
+const setLessonProgressState = (progress: LessonDetailProgress | null, options?: { persistLocal?: boolean }) => {
+  lessonProgressState.value = progress ? { ...progress } : null
+
+  if (options?.persistLocal && lessonProgressState.value) {
+    writeStoredProgress(lessonProgressState.value)
+  }
+}
+
+const patchLessonDetailProgress = (progress: LessonDetailProgress) => {
+  if (!lessonDetailResponse.value || lessonDetailResponse.value.status !== 'success' || !lessonDetailResponse.value.data) {
+    return
+  }
+
+  lessonDetailResponse.value = {
+    ...lessonDetailResponse.value,
+    data: {
+      ...lessonDetailResponse.value.data,
+      progress: {
+        ...progress
+      }
+    }
+  }
+}
+
 watch(
   () => lessonDetail.value?.progress,
   (progress) => {
-    lessonProgressState.value = progress ? { ...progress } : null
+    setLessonProgressState(mergeProgressWithStoredPosition(progress || null))
   },
   { immediate: true }
 )
@@ -90,12 +167,15 @@ const persistLessonProgress = async (payload: { lastPositionInSeconds: number; m
   )
 
   if (response.status === 'success' && response.data) {
-    lessonProgressState.value = {
+    const progress = {
       lastPositionInSeconds: response.data.lastPositionInSeconds,
       watchedMinutes: response.data.watchedMinutes,
       completionRate: response.data.completionRate,
       isCompleted: response.data.isCompleted
     }
+
+    setLessonProgressState(progress, { persistLocal: true })
+    patchLessonDetailProgress(progress)
   }
 }
 
@@ -139,6 +219,19 @@ const onVideoProgress = async (payload: PlayerProgressPayload) => {
     return
   }
 
+  const optimisticProgress = {
+    lastPositionInSeconds: payload.currentTimeInSeconds,
+    watchedMinutes: Math.max(
+      lessonProgressState.value?.watchedMinutes || 0,
+      Math.ceil(payload.currentTimeInSeconds / 60)
+    ),
+    completionRate: Math.max(lessonProgressState.value?.completionRate || 0, payload.completionRate),
+    isCompleted: Boolean(lessonProgressState.value?.isCompleted || payload.ended)
+  }
+
+  setLessonProgressState(optimisticProgress, { persistLocal: true })
+  patchLessonDetailProgress(optimisticProgress)
+
   await saveLessonProgress({
     lastPositionInSeconds: payload.currentTimeInSeconds,
     markAsCompleted: payload.ended
@@ -146,7 +239,8 @@ const onVideoProgress = async (payload: PlayerProgressPayload) => {
 }
 
 const onLessonCompletionUpdated = (progress: LessonDetailProgress) => {
-  lessonProgressState.value = { ...progress }
+  setLessonProgressState(progress, { persistLocal: true })
+  patchLessonDetailProgress(progress)
   progressErrorMessage.value = ''
 }
 
