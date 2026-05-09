@@ -1713,6 +1713,22 @@ describe('getAccessibleModuleAssessmentsBySlugs', () => {
         }
       }
 
+      if (collectionName === 'platformSettings') {
+        return {
+          doc: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ exists: false })
+          }))
+        }
+      }
+
+      if (collectionName === 'assessmentAttempts') {
+        return {
+          where: vi.fn(() => ({
+            get: vi.fn().mockResolvedValue({ docs: [] })
+          }))
+        }
+      }
+
       throw new Error(`Unexpected collection ${collectionName}`)
     })
 

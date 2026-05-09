@@ -13,6 +13,7 @@ export type CourseVisibility = 'draft' | 'published' | 'archived'
 export type LessonContentType = 'video' | 'text' | 'audio'
 export type VideoProvider = 'youtube' | 'vimeo' | 'upload' | 'embed'
 export type AssessmentQuestionType = 'multiple_choice' | 'free_text'
+export type AssessmentAttemptStatus = 'pending_review' | 'graded'
 export type HighlightKind = 'news' | 'course' | 'announcement'
 export type HighlightMediaType = 'image' | 'video'
 export type HighlightActionTarget = '_self' | '_blank'
@@ -172,10 +173,18 @@ export interface AssessmentAttempt extends AuditedDocument {
   courseId: string
   moduleId: string
   assessmentId: string
-  score: number
-  approved: boolean
-  answers: Record<string, string[]>
+  attemptNumber: number
+  status: AssessmentAttemptStatus
+  score: number | null
+  approved: boolean | null
+  answers: Record<string, string | string[]>
   submittedAt: TimestampValue | null
+  gradedAt: TimestampValue | null
+  gradedBy: string | null
+}
+
+export interface AssessmentPlatformSettings extends AuditedDocument {
+  maxAttemptsPerAssessment: number
 }
 
 export interface Certificate extends AuditedDocument {
@@ -227,6 +236,7 @@ export type FirestoreCollections =
   | 'lessonProgress'
   | 'moduleProgress'
   | 'assessmentAttempts'
+  | 'platformSettings'
   | 'certificates'
   | 'highlights'
   | 'adminLogs'

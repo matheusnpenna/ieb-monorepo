@@ -1,9 +1,11 @@
 import type {
+  AdminAssessmentAttemptViewItem,
   AdminAssessmentInput,
   AdminCourseInput,
   AdminLessonInput,
   AdminModuleInput,
   Assessment,
+  AssessmentAttempt,
   AuthSessionContext,
   Course,
   CourseEnrollment,
@@ -16,10 +18,14 @@ import type {
   LessonCommentItem,
   LessonProgressUpdateData,
   ModuleDetailLesson,
+  StudentAssessmentSubmissionData,
   StudentAssessmentItem,
-  StudentModuleAssessmentData
+  StudentModuleAssessmentData,
+  User
 } from '@ieb/shared'
 import { createError } from 'h3'
+import { randomUUID } from 'node:crypto'
+import { getAssessmentPlatformSettings } from './assessment-settings'
 import { writeAdminLog } from './auth'
 import { getFirebaseAdminCollection } from './firebase-admin'
 
@@ -52,6 +58,18 @@ const toAssessmentDocument = (snapshot: { id: string; data: () => unknown }) =>
     id: snapshot.id,
     ...(snapshot.data() as Omit<Assessment, 'id'>)
   }) as Assessment
+
+const toAssessmentAttemptDocument = (snapshot: { id: string; data: () => unknown }) =>
+  ({
+    id: snapshot.id,
+    ...(snapshot.data() as Omit<AssessmentAttempt, 'id'>)
+  }) as AssessmentAttempt
+
+const toUserDocument = (snapshot: { id: string; data: () => unknown }) =>
+  ({
+    id: snapshot.id,
+    ...(snapshot.data() as Omit<User, 'id'>)
+  }) as User
 
 const toLessonCommentDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
@@ -1039,24 +1057,130 @@ const listModuleAssessments = async (module: CourseModule) => {
   })
 }
 
-const sanitizeAssessmentForStudent = (assessment: Assessment): StudentAssessmentItem => ({
-  id: assessment.id,
-  slug: assessment.slug,
-  title: assessment.title,
-  description: assessment.description,
-  questionType: assessment.questionType,
-  passingScore: assessment.passingScore,
-  timeLimitInMinutes: assessment.timeLimitInMinutes,
-  questionCount: assessment.questions.length,
-  questions: assessment.questions.map((question) => ({
-    id: question.id,
-    prompt: question.prompt,
-    options: question.options.map((option) => ({
-      id: option.id,
-      label: option.label
+const listAssessmentAttempts = async () => {
+  const snapshot = await getFirebaseAdminCollection('assessmentAttempts').get()
+
+  return snapshot.docs.map(toAssessmentAttemptDocument).filter((attempt) => !attempt.deletedAt)
+}
+
+const listUserAssessmentAttempts = async (userId: string) => {
+  const snapshot = await getFirebaseAdminCollection('assessmentAttempts').where('userId', '==', userId).get()
+
+  return snapshot.docs.map(toAssessmentAttemptDocument).filter((attempt) => !attempt.deletedAt)
+}
+
+const getAssessmentAttemptById = async (attemptId: string) => {
+  const snapshot = await getFirebaseAdminCollection('assessmentAttempts').doc(attemptId).get()
+
+  if (!snapshot.exists) {
+    return null
+  }
+
+  return toAssessmentAttemptDocument(snapshot)
+}
+
+const normalizeAssessmentAnswerText = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) {
+    return value[0]?.trim() || ''
+  }
+
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+const normalizeAssessmentAnswerOptions = (value: string | string[] | undefined) => {
+  const rawValues = Array.isArray(value) ? value : typeof value === 'string' ? [value] : []
+
+  return [...new Set(rawValues.map((item) => item.trim()).filter(Boolean))].sort((left, right) =>
+    left.localeCompare(right, 'pt-BR')
+  )
+}
+
+const buildStudentAssessmentAttemptPreview = (attempt: AssessmentAttempt | null) => {
+  if (!attempt) {
+    return null
+  }
+
+  return {
+    id: attempt.id,
+    attemptNumber: attempt.attemptNumber,
+    status: attempt.status,
+    score: attempt.score,
+    approved: attempt.approved,
+    submittedAt: attempt.submittedAt
+  }
+}
+
+const buildStudentAssessmentAvailability = (
+  assessment: Assessment,
+  attempts: AssessmentAttempt[],
+  maxAttemptsPerAssessment: number
+) => {
+  const orderedAttempts = [...attempts].sort((left, right) => right.attemptNumber - left.attemptNumber)
+  const latestAttempt = orderedAttempts[0] || null
+  const attemptsUsed = attempts.length
+  const attemptsRemaining = Math.max(maxAttemptsPerAssessment - attemptsUsed, 0)
+
+  if (assessment.questionType === 'free_text' && latestAttempt?.status === 'pending_review') {
+    return {
+      availability: 'blocked_pending_review' as const,
+      blockingMessage: 'Sua ultima tentativa ainda esta aguardando correcao manual.',
+      attemptsUsed,
+      attemptsRemaining,
+      latestAttempt: buildStudentAssessmentAttemptPreview(latestAttempt)
+    }
+  }
+
+  if (attemptsUsed >= maxAttemptsPerAssessment) {
+    return {
+      availability: 'blocked_attempt_limit' as const,
+      blockingMessage: 'Voce atingiu o limite maximo de tentativas para esta avaliacao.',
+      attemptsUsed,
+      attemptsRemaining,
+      latestAttempt: buildStudentAssessmentAttemptPreview(latestAttempt)
+    }
+  }
+
+  return {
+    availability: 'available' as const,
+    blockingMessage: null,
+    attemptsUsed,
+    attemptsRemaining,
+    latestAttempt: buildStudentAssessmentAttemptPreview(latestAttempt)
+  }
+}
+
+const sanitizeAssessmentForStudent = (
+  assessment: Assessment,
+  attempts: AssessmentAttempt[],
+  maxAttemptsPerAssessment: number
+): StudentAssessmentItem => {
+  const availability = buildStudentAssessmentAvailability(assessment, attempts, maxAttemptsPerAssessment)
+
+  return {
+    id: assessment.id,
+    slug: assessment.slug,
+    title: assessment.title,
+    description: assessment.description,
+    questionType: assessment.questionType,
+    passingScore: assessment.passingScore,
+    timeLimitInMinutes: assessment.timeLimitInMinutes,
+    questionCount: assessment.questions.length,
+    availability: availability.availability,
+    blockingMessage: availability.blockingMessage,
+    attemptsUsed: availability.attemptsUsed,
+    attemptsRemaining: availability.attemptsRemaining,
+    maxAttempts: maxAttemptsPerAssessment,
+    latestAttempt: availability.latestAttempt,
+    questions: assessment.questions.map((question) => ({
+      id: question.id,
+      prompt: question.prompt,
+      options: question.options.map((option) => ({
+        id: option.id,
+        label: option.label
+      }))
     }))
-  }))
-})
+  }
+}
 
 const listCourseLessonProgress = async (userId: string, courseId: string) => {
   const lessonProgressSnapshot = await getFirebaseAdminCollection('lessonProgress').where('userId', '==', userId).get()
@@ -2227,6 +2351,8 @@ export const getAccessibleModuleAssessmentsBySlugs = async (
 ): Promise<StudentModuleAssessmentData> => {
   const moduleDetail = await getAccessibleModuleDetailBySlugs(session, courseSlug, moduleSlug)
   const assessments = await listModuleAssessments(moduleDetail.module)
+  const settings = await getAssessmentPlatformSettings()
+  const userAttempts = await listUserAssessmentAttempts(session.user.id)
   const progress = moduleDetail.progress
 
   if (assessments.length === 0) {
@@ -2253,7 +2379,13 @@ export const getAccessibleModuleAssessmentsBySlugs = async (
       assessments.length === 1
         ? 'A avaliacao deste modulo ja esta disponivel.'
         : 'As avaliacoes deste modulo ja estao disponiveis.',
-    assessments: assessments.map(sanitizeAssessmentForStudent),
+    assessments: assessments.map((assessment) =>
+      sanitizeAssessmentForStudent(
+        assessment,
+        userAttempts.filter((attempt) => attempt.assessmentId === assessment.id),
+        settings.maxAttemptsPerAssessment
+      )
+    ),
     progress
   }
 }
@@ -2621,4 +2753,311 @@ export const markLessonAsCompletedBySlugs = async (
     lessonId: lesson.id,
     isCompleted: true as const
   }
+}
+
+const buildAssessmentAttemptViewItem = (
+  attempt: AssessmentAttempt,
+  usersById: Map<string, User>,
+  coursesById: Map<string, Course>,
+  modulesById: Map<string, CourseModule>,
+  assessmentsById: Map<string, Assessment>
+): AdminAssessmentAttemptViewItem | null => {
+  const user = usersById.get(attempt.userId)
+  const course = coursesById.get(attempt.courseId)
+  const module = modulesById.get(attempt.moduleId)
+  const assessment = assessmentsById.get(attempt.assessmentId)
+
+  if (!user || !course || !module || !assessment || user.deletedAt || course.deletedAt || module.deletedAt || assessment.deletedAt) {
+    return null
+  }
+
+  return {
+    id: attempt.id,
+    userId: attempt.userId,
+    studentName: user.fullName,
+    studentEmail: user.email,
+    courseId: course.id,
+    courseTitle: course.title,
+    moduleId: module.id,
+    moduleTitle: module.title,
+    assessmentId: assessment.id,
+    assessmentTitle: assessment.title,
+    assessmentQuestionType: assessment.questionType,
+    passingScore: assessment.passingScore,
+    attemptNumber: attempt.attemptNumber,
+    status: attempt.status,
+    score: attempt.score,
+    approved: attempt.approved,
+    submittedAt: attempt.submittedAt,
+    gradedAt: attempt.gradedAt,
+    answers: attempt.answers
+  }
+}
+
+export const submitAssessmentAttemptBySlugs = async (
+  session: AuthSessionContext,
+  courseSlug: string,
+  moduleSlug: string,
+  assessmentSlug: string,
+  answers: Record<string, string | string[]>
+): Promise<StudentAssessmentSubmissionData> => {
+  const moduleAssessments = await getAccessibleModuleAssessmentsBySlugs(session, courseSlug, moduleSlug)
+
+  if (moduleAssessments.availability !== 'available') {
+    throw createHttpError(400, moduleAssessments.message)
+  }
+
+  const assessmentItem = moduleAssessments.assessments.find((assessment) => assessment.slug === assessmentSlug.trim())
+
+  if (!assessmentItem) {
+    throw createHttpError(404, 'Avaliacao nao encontrada.')
+  }
+
+  if (assessmentItem.availability !== 'available') {
+    throw createHttpError(400, assessmentItem.blockingMessage || 'Esta avaliacao nao esta disponivel para resposta agora.')
+  }
+
+  const assessment = await getAssessmentById(assessmentItem.id)
+
+  if (!assessment || assessment.deletedAt) {
+    throw createHttpError(404, 'Avaliacao nao encontrada.')
+  }
+
+  const userAttempts = (await listUserAssessmentAttempts(session.user.id)).filter(
+    (attempt) => attempt.assessmentId === assessment.id
+  )
+  const attemptNumber = userAttempts.length + 1
+  const now = toTimestamp()
+  const normalizedAnswers = assessment.questions.reduce<Record<string, string | string[]>>((accumulator, question) => {
+    const providedValue = answers?.[question.id]
+
+    if (assessment.questionType === 'multiple_choice') {
+      const selectedOptionIds = normalizeAssessmentAnswerOptions(providedValue)
+
+      if (selectedOptionIds.length === 0) {
+        throw createHttpError(400, `Responda a questao "${question.prompt}".`)
+      }
+
+      const validOptionIds = new Set(question.options.map((option) => option.id))
+
+      if (selectedOptionIds.some((optionId) => !validOptionIds.has(optionId))) {
+        throw createHttpError(400, `Existe uma alternativa invalida na questao "${question.prompt}".`)
+      }
+
+      accumulator[question.id] = selectedOptionIds
+      return accumulator
+    }
+
+    const responseText = normalizeAssessmentAnswerText(providedValue)
+
+    if (!responseText) {
+      throw createHttpError(400, `Responda a questao "${question.prompt}".`)
+    }
+
+    accumulator[question.id] = responseText
+    return accumulator
+  }, {})
+
+  let status: AssessmentAttempt['status'] = 'pending_review'
+  let score: number | null = null
+  let approved: boolean | null = null
+  let gradedAt: string | null = null
+  let gradedBy: string | null = null
+
+  if (assessment.questionType === 'multiple_choice') {
+    const correctQuestions = assessment.questions.filter((question) => {
+      const expectedOptionIds = question.options
+        .filter((option) => option.isCorrect)
+        .map((option) => option.id)
+        .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+      const providedOptionIds = normalizeAssessmentAnswerOptions(normalizedAnswers[question.id])
+
+      return expectedOptionIds.length === providedOptionIds.length && expectedOptionIds.every((optionId, index) => optionId === providedOptionIds[index])
+    }).length
+
+    score = assessment.questions.length > 0 ? Math.round((correctQuestions / assessment.questions.length) * 100) : 0
+    approved = score >= assessment.passingScore
+    status = 'graded'
+    gradedAt = now
+    gradedBy = 'system:auto'
+  }
+
+  const attemptId = randomUUID()
+  const attempt: AssessmentAttempt = {
+    id: attemptId,
+    userId: session.user.id,
+    courseId: assessment.courseId,
+    moduleId: assessment.moduleId,
+    assessmentId: assessment.id,
+    attemptNumber,
+    status,
+    score,
+    approved,
+    answers: normalizedAnswers,
+    submittedAt: now,
+    gradedAt,
+    gradedBy,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+    createdBy: session.user.id,
+    updatedBy: session.user.id,
+    deletedBy: null
+  }
+
+  await getFirebaseAdminCollection('assessmentAttempts').doc(attempt.id).set(attempt)
+
+  return {
+    attempt: {
+      id: attempt.id,
+      assessmentId: attempt.assessmentId,
+      attemptNumber: attempt.attemptNumber,
+      status: attempt.status,
+      score: attempt.score,
+      approved: attempt.approved,
+      submittedAt: attempt.submittedAt
+    }
+  }
+}
+
+export const listAdminAssessmentAttemptsForManagement = async (
+  session: AuthSessionContext
+): Promise<AdminAssessmentAttemptViewItem[]> => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const [attempts, usersSnapshot, courses, modules, assessments] = await Promise.all([
+    listAssessmentAttempts(),
+    getFirebaseAdminCollection('users').get(),
+    listAdminCourses(),
+    listAdminModules(),
+    listAdminAssessments()
+  ])
+
+  const usersById = new Map(usersSnapshot.docs.map((document) => {
+    const user = toUserDocument(document)
+    return [user.id, user] as const
+  }))
+  const coursesById = new Map(courses.map((course) => [course.id, course] as const))
+  const modulesById = new Map(modules.map((module) => [module.id, module] as const))
+  const assessmentsById = new Map(assessments.map((assessment) => [assessment.id, assessment] as const))
+
+  return attempts
+    .map((attempt) => buildAssessmentAttemptViewItem(attempt, usersById, coursesById, modulesById, assessmentsById))
+    .filter((attempt): attempt is AdminAssessmentAttemptViewItem => Boolean(attempt))
+    .sort((left, right) => {
+      const rightTimestamp = toTimestampNumber(right.submittedAt || right.gradedAt)
+      const leftTimestamp = toTimestampNumber(left.submittedAt || left.gradedAt)
+
+      if (rightTimestamp !== leftTimestamp) {
+        return rightTimestamp - leftTimestamp
+      }
+
+      return right.attemptNumber - left.attemptNumber
+    })
+}
+
+export const updateAdminAssessmentAttemptScoreById = async (
+  session: AuthSessionContext,
+  attemptId: string,
+  score: number
+): Promise<AdminAssessmentAttemptViewItem> => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
+    throw createHttpError(400, 'Informe uma nota valida entre 0 e 100.')
+  }
+
+  const existingAttempt = await getAssessmentAttemptById(attemptId.trim())
+
+  if (!existingAttempt || existingAttempt.deletedAt) {
+    throw createHttpError(404, 'Resposta de avaliacao nao encontrada.')
+  }
+
+  const assessment = await getAssessmentById(existingAttempt.assessmentId)
+
+  if (!assessment || assessment.deletedAt) {
+    throw createHttpError(404, 'Avaliacao da resposta nao encontrada.')
+  }
+
+  const now = toTimestamp()
+  const updatedAttempt: AssessmentAttempt = {
+    ...existingAttempt,
+    status: 'graded',
+    score: Math.round(score),
+    approved: Math.round(score) >= assessment.passingScore,
+    gradedAt: now,
+    gradedBy: session.user.id,
+    updatedAt: now,
+    updatedBy: session.user.id
+  }
+
+  await getFirebaseAdminCollection('assessmentAttempts').doc(existingAttempt.id).set(updatedAttempt)
+
+  await writeAdminLog(session, {
+    action: 'update',
+    targetCollection: 'assessmentAttempts',
+    targetId: updatedAttempt.id,
+    summary: 'Atualizou a nota de uma resposta de avaliacao.',
+    metadata: {
+      score: updatedAttempt.score,
+      approved: updatedAttempt.approved
+    }
+  })
+
+  const attemptViews = await listAdminAssessmentAttemptsForManagement(session)
+  const updatedView = attemptViews.find((attempt) => attempt.id === updatedAttempt.id)
+
+  if (!updatedView) {
+    throw createHttpError(404, 'Resposta de avaliacao nao encontrada.')
+  }
+
+  return updatedView
+}
+
+export const deleteAdminAssessmentAttemptById = async (
+  session: AuthSessionContext,
+  attemptId: string
+): Promise<AdminAssessmentAttemptViewItem> => {
+  if (session.user.role !== 'admin') {
+    throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
+  }
+
+  const existingAttempt = await getAssessmentAttemptById(attemptId.trim())
+
+  if (!existingAttempt || existingAttempt.deletedAt) {
+    throw createHttpError(404, 'Resposta de avaliacao nao encontrada.')
+  }
+
+  const attemptViews = await listAdminAssessmentAttemptsForManagement(session)
+  const deletedView = attemptViews.find((attempt) => attempt.id === existingAttempt.id)
+
+  if (!deletedView) {
+    throw createHttpError(404, 'Resposta de avaliacao nao encontrada.')
+  }
+
+  const now = toTimestamp()
+
+  await getFirebaseAdminCollection('assessmentAttempts').doc(existingAttempt.id).set({
+    deletedAt: now,
+    deletedBy: session.user.id,
+    updatedAt: now,
+    updatedBy: session.user.id
+  }, { merge: true })
+
+  await writeAdminLog(session, {
+    action: 'delete',
+    targetCollection: 'assessmentAttempts',
+    targetId: existingAttempt.id,
+    summary: 'Excluiu uma resposta de avaliacao para liberar nova tentativa.',
+    metadata: {
+      userId: existingAttempt.userId,
+      assessmentId: existingAttempt.assessmentId
+    }
+  })
+
+  return deletedView
 }

@@ -2,6 +2,9 @@ import type {
   ButtonVariant,
   AdminActivityLog,
   Assessment,
+  AssessmentAttempt,
+  AssessmentAttemptStatus,
+  AssessmentPlatformSettings,
   AssessmentQuestionType,
   Classroom,
   Course,
@@ -311,6 +314,19 @@ export interface StudentAssessmentItem {
   passingScore: number
   timeLimitInMinutes: number | null
   questionCount: number
+  availability: 'available' | 'blocked_pending_review' | 'blocked_attempt_limit'
+  blockingMessage: string | null
+  attemptsUsed: number
+  attemptsRemaining: number
+  maxAttempts: number
+  latestAttempt: {
+    id: string
+    attemptNumber: number
+    status: AssessmentAttemptStatus
+    score: number | null
+    approved: boolean | null
+    submittedAt: string | null
+  } | null
   questions: StudentAssessmentQuestion[]
 }
 
@@ -322,3 +338,56 @@ export interface StudentModuleAssessmentData {
 }
 
 export type StudentModuleAssessmentResponse = ApiResponse<StudentModuleAssessmentData | null>
+
+export interface StudentAssessmentSubmissionInput {
+  answers: Record<string, string | string[]>
+}
+
+export interface StudentAssessmentSubmissionData {
+  attempt: {
+    id: string
+    assessmentId: string
+    attemptNumber: number
+    status: AssessmentAttemptStatus
+    score: number | null
+    approved: boolean | null
+    submittedAt: string | null
+  }
+}
+
+export type StudentAssessmentSubmissionResponse = ApiResponse<StudentAssessmentSubmissionData | null>
+
+export interface AdminAssessmentSettingsInput {
+  maxAttemptsPerAssessment: number
+}
+
+export type AdminAssessmentSettingsResponse = ApiResponse<AssessmentPlatformSettings | null>
+
+export interface AdminAssessmentAttemptViewItem {
+  id: string
+  userId: string
+  studentName: string
+  studentEmail: string
+  courseId: string
+  courseTitle: string
+  moduleId: string
+  moduleTitle: string
+  assessmentId: string
+  assessmentTitle: string
+  assessmentQuestionType: AssessmentQuestionType
+  passingScore: number
+  attemptNumber: number
+  status: AssessmentAttemptStatus
+  score: number | null
+  approved: boolean | null
+  submittedAt: string | null
+  gradedAt: string | null
+  answers: AssessmentAttempt['answers']
+}
+
+export type AdminAssessmentAttemptsResponse = ApiResponse<AdminAssessmentAttemptViewItem[]>
+export type AdminAssessmentAttemptResponse = ApiResponse<AdminAssessmentAttemptViewItem | null>
+
+export interface AdminAssessmentAttemptScoreInput {
+  score: number
+}

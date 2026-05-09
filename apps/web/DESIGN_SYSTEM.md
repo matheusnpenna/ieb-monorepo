@@ -40,6 +40,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiButton`: CTA primario, secundario, ghost e success.
 - `UiField`: wrapper oficial para label, hint e erro.
 - `UiInput`: input padrao.
+- `UiCheckbox`: checkbox padrao para selecoes booleanas e listas de alternativas.
 - `UiSelect`: select padrao.
 - `UiTextarea`: textarea padrao.
 - `UiSpinner`: indicador de carregamento reutilizavel para estados async.
@@ -83,6 +84,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
   - `success`
   - `danger`
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
+- Checkboxes reutilizaveis devem preferir `UiCheckbox` em vez de `input type="checkbox"` cru.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.
 - Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.

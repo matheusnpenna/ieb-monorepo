@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import type { AdminAssessmentsResponse, AdminCoursesResponse, AdminModulesResponse } from '@ieb/shared'
+import type {
+  AdminAssessmentSettingsResponse,
+  AdminAssessmentsResponse,
+  AdminCoursesResponse,
+  AdminModulesResponse
+} from '@ieb/shared'
 import PageIntro from '../base/PageIntro.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiSelect from '../ui/UiSelect.vue'
 import UiSpinner from '../ui/UiSpinner.vue'
+import { getRequestErrorMessage } from '../../lib/utils'
 
 const route = useRoute()
 
@@ -24,10 +30,32 @@ const defaultModulesResponse = {
   data: []
 } satisfies AdminModulesResponse
 
+const defaultSettingsResponse = {
+  status: 'success',
+  data: null
+} satisfies AdminAssessmentSettingsResponse
+
 const searchTerm = ref('')
 const selectedCourseId = ref(typeof route.query.course === 'string' ? route.query.course : '')
 const selectedModuleId = ref(typeof route.query.module === 'string' ? route.query.module : '')
+const settingsForm = ref({
+  maxAttemptsPerAssessment: 3
+})
+const settingsSubmitPending = ref(false)
+const settingsFeedbackMessage = ref('')
 const hasRequiredFilters = computed(() => Boolean(selectedCourseId.value && selectedModuleId.value))
+
+const { data: settingsResponse, pending: settingsPending, refresh: refreshSettings } = await useAsyncData<AdminAssessmentSettingsResponse>(
+  'admin-assessment-settings',
+  () =>
+    $fetch('/api/admin/assessments/settings', {
+      credentials: 'include',
+      ignoreResponseError: true
+    }),
+  {
+    default: () => defaultSettingsResponse
+  }
+)
 
 const { data: coursesResponse, pending: coursesPending } = await useAsyncData<AdminCoursesResponse>(
   'admin-assessment-courses',
@@ -120,6 +148,10 @@ const filteredAssessments = computed(() => {
 })
 
 const listErrorMessage = computed(() => {
+  if (settingsResponse.value?.status === 'error') {
+    return settingsResponse.value.messages[0] || 'Nao foi possivel carregar a configuracao das avaliacoes.'
+  }
+
   if (assessmentsResponse.value?.status === 'error') {
     return assessmentsResponse.value.messages[0] || 'Nao foi possivel carregar as avaliacoes.'
   }
@@ -135,6 +167,18 @@ const listErrorMessage = computed(() => {
   return ''
 })
 
+watch(
+  settingsResponse,
+  (response) => {
+    if (!response || response.status !== 'success' || !response.data) {
+      return
+    }
+
+    settingsForm.value.maxAttemptsPerAssessment = response.data.maxAttemptsPerAssessment
+  },
+  { immediate: true }
+)
+
 const newAssessmentHref = computed(() => {
   const query = new URLSearchParams()
 
@@ -148,6 +192,37 @@ const newAssessmentHref = computed(() => {
 
   return query.size > 0 ? `/admin/avaliacoes/novo?${query.toString()}` : '/admin/avaliacoes/novo'
 })
+
+const onSaveSettings = async () => {
+  if (settingsSubmitPending.value) {
+    return
+  }
+
+  settingsSubmitPending.value = true
+  settingsFeedbackMessage.value = ''
+
+  try {
+    const response = await $fetch<AdminAssessmentSettingsResponse>('/api/admin/assessments/settings', {
+      method: 'PATCH',
+      credentials: 'include',
+      body: {
+        maxAttemptsPerAssessment: Number(settingsForm.value.maxAttemptsPerAssessment || 0)
+      }
+    })
+
+    if (response.status !== 'success' || !response.data) {
+      throw new Error('Nao foi possivel salvar a configuracao de tentativas.')
+    }
+
+    settingsResponse.value = response
+    settingsFeedbackMessage.value = 'Limite global de tentativas atualizado com sucesso.'
+    await refreshSettings()
+  } catch (error) {
+    settingsFeedbackMessage.value = getRequestErrorMessage(error, 'Nao foi possivel salvar a configuracao de tentativas.')
+  } finally {
+    settingsSubmitPending.value = false
+  }
+}
 </script>
 
 <template>
@@ -160,6 +235,35 @@ const newAssessmentHref = computed(() => {
 
     <SurfaceCard>
       <div class="section-stack">
+        <div class="assessment-settings-card">
+          <div class="section-stack assessment-settings-copy">
+            <h2 class="section-title">Tentativas globais da plataforma</h2>
+            <p class="body-copy">
+              Defina quantas vezes um aluno pode responder cada avaliacao em toda a plataforma.
+            </p>
+          </div>
+
+          <div class="assessment-settings-form">
+            <UiInput
+              v-model.number="settingsForm.maxAttemptsPerAssessment"
+              type="number"
+              min="1"
+              max="20"
+              :disabled="settingsPending || settingsSubmitPending"
+            />
+            <UiButton type="button" variant="secondary" size="sm" :loading="settingsSubmitPending" @click="onSaveSettings">
+              Salvar limite
+            </UiButton>
+            <UiButton to="/admin/avaliacoes/respostas" variant="ghost" size="sm">
+              Ver respostas
+            </UiButton>
+          </div>
+
+          <p v-if="settingsFeedbackMessage" class="body-copy">
+            {{ settingsFeedbackMessage }}
+          </p>
+        </div>
+
         <div class="list-toolbar assessments-toolbar">
           <UiInput v-model="searchTerm" placeholder="Pesquisar por titulo da avaliacao" :disabled="!hasRequiredFilters" />
 
@@ -249,6 +353,24 @@ const newAssessmentHref = computed(() => {
 .assessment-list {
   display: grid;
   gap: 1rem;
+}
+
+.assessment-settings-card {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.assessment-settings-copy {
+  gap: 0.35rem;
+}
+
+.assessment-settings-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .assessment-card {
