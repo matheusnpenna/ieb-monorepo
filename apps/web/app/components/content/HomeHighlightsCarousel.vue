@@ -9,7 +9,10 @@ const defaultHighlightsResponse = {
   data: []
 } satisfies HomeHighlightsResponse
 
+const AUTO_ROTATION_INTERVAL_MS = 7000
+
 const currentIndex = ref(0)
+const autoRotationTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 const { data: highlightsResponse, pending: highlightsPending } = await useAsyncData<HomeHighlightsResponse>(
   'home-highlights',
@@ -82,6 +85,44 @@ const goToNext = () => {
 const goToIndex = (index: number) => {
   currentIndex.value = index
 }
+
+const stopAutoRotation = () => {
+  if (!autoRotationTimer.value) {
+    return
+  }
+
+  clearInterval(autoRotationTimer.value)
+  autoRotationTimer.value = null
+}
+
+const startAutoRotation = () => {
+  stopAutoRotation()
+
+  if (!hasCarousel.value) {
+    return
+  }
+
+  autoRotationTimer.value = setInterval(() => {
+    goToNext()
+  }, AUTO_ROTATION_INTERVAL_MS)
+}
+
+watch(
+  hasCarousel,
+  (value) => {
+    if (!value) {
+      stopAutoRotation()
+      return
+    }
+
+    startAutoRotation()
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  stopAutoRotation()
+})
 </script>
 
 <template>
