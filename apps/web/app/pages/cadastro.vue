@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type {
   AuthSuccessResponse,
-  RegistrationStatusResponse,
   UserRegion
 } from '@ieb/shared'
 import AuthShellCard from '../components/auth/AuthShellCard.vue'
@@ -17,49 +16,24 @@ definePageMeta({
 })
 
 useSeoMeta({
-  title: 'Cadastro'
+  title: 'Cadastro de aluno'
 })
 
-const route = useRoute()
 const { setUser } = useAuthSession()
 const pending = ref(false)
 const feedbackMessage = ref('')
-const classroomUuid = computed(() => String(route.query.turma ?? ''))
 
 const form = reactive({
   fullName: '',
   cpf: '',
   email: '',
+  phone: '',
   password: '',
   passwordConfirmation: '',
   region: 'feira-de-santana' as UserRegion
 })
 
-const closedRegistrationState: RegistrationStatusResponse = {
-  isOpen: false,
-  message: 'Periodo de cadastro encerrado. Para saber mais, entre em contato com o suporte responsável',
-  classroomName: null
-}
-
-const { data: registrationStatus, pending: registrationPending } = await useFetch<RegistrationStatusResponse>(
-  '/api/auth/registration-status',
-  {
-    query: {
-      classroomUuid
-    },
-    default: () => closedRegistrationState,
-    watch: [classroomUuid]
-  }
-)
-
-const canRegister = computed(() => registrationStatus.value?.isOpen ?? false)
-
 const onSubmit = async () => {
-  if (!canRegister.value) {
-    feedbackMessage.value = closedRegistrationState.message
-    return
-  }
-
   if (form.password !== form.passwordConfirmation) {
     feedbackMessage.value = 'A confirmacao de senha precisa ser igual a senha informada.'
     return
@@ -72,10 +46,10 @@ const onSubmit = async () => {
     const response = await $fetch<AuthSuccessResponse>('/api/auth/register', {
       method: 'POST',
       body: {
-        classroomUuid: classroomUuid.value,
         fullName: form.fullName,
         cpf: form.cpf,
         email: form.email,
+        phone: form.phone,
         password: form.password,
         region: form.region
       },
@@ -95,20 +69,14 @@ const onSubmit = async () => {
 <template>
   <AuthShellCard
     title="Instituto Eurico Bergsten"
-    subtitle="Insira as informações para se cadastrar"
+    subtitle="Crie sua conta de aluno para acessar a plataforma"
   >
-    <p class="pill">
-      Turma:
-      {{ registrationStatus.classroomName || classroomUuid || 'nao informada' }}
+    <p class="feedback-message">
+      Seu cadastro cria apenas a conta de acesso. A matrícula em cursos será liberada depois por um administrador.
     </p>
 
-    <p v-if="registrationPending" class="feedback-message">Validando disponibilidade da turma...</p>
-    <p v-else class="feedback-message" :data-tone="canRegister ? 'success' : 'error'">
-      {{ registrationStatus.message }}
-    </p>
-
-    <form v-if="canRegister" class="form-grid" @submit.prevent="onSubmit">
-      <UiField label="Nome" required>
+    <form class="form-grid" @submit.prevent="onSubmit">
+      <UiField label="Nome completo" required>
         <UiInput
           v-model="form.fullName"
           type="text"
@@ -131,6 +99,15 @@ const onSubmit = async () => {
           v-model="form.email"
           type="email"
           placeholder="voce@exemplo.com"
+          :disabled="pending"
+        />
+      </UiField>
+
+      <UiField label="Telefone" hint="Opcional.">
+        <UiInput
+          v-model="form.phone"
+          type="tel"
+          placeholder="(75) 99999-9999"
           :disabled="pending"
         />
       </UiField>
@@ -167,6 +144,7 @@ const onSubmit = async () => {
       <UiButton type="submit" block :loading="pending" :disabled="pending">
         {{ pending ? 'Criando cadastro...' : 'Criar cadastro' }}
       </UiButton>
+      <NuxtLink to="/login" class="body-copy">Ja tenho cadastro</NuxtLink>
     </form>
   </AuthShellCard>
 </template>

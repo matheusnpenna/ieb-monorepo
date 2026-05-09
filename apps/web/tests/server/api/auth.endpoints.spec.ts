@@ -11,7 +11,9 @@ const {
   requireAuthSession,
   sendPasswordRecoveryEmail,
   registerAccount,
-  getRegistrationStatus
+  getRegistrationStatus,
+  listAdminUserEnrollments,
+  updateAdminUserEnrollments
 } = vi.hoisted(() => ({
   readBody: vi.fn(),
   loginWithEmailAndPassword: vi.fn(),
@@ -20,7 +22,9 @@ const {
   requireAuthSession: vi.fn(),
   sendPasswordRecoveryEmail: vi.fn(),
   registerAccount: vi.fn(),
-  getRegistrationStatus: vi.fn()
+  getRegistrationStatus: vi.fn(),
+  listAdminUserEnrollments: vi.fn(),
+  updateAdminUserEnrollments: vi.fn()
 }))
 
 vi.hoisted(() => {
@@ -47,12 +51,19 @@ vi.mock('../../../server/utils/auth', () => ({
   getRegistrationStatus
 }))
 
+vi.mock('../../../server/utils/enrollments', () => ({
+  listAdminUserEnrollments,
+  updateAdminUserEnrollments
+}))
+
 import loginHandler from '../../../server/api/auth/login.post'
 import logoutHandler from '../../../server/api/auth/logout.post'
 import passwordRecoveryHandler from '../../../server/api/auth/password-recovery.post'
 import registerHandler from '../../../server/api/auth/register.post'
 import registrationStatusHandler from '../../../server/api/auth/registration-status.get'
 import sessionHandler from '../../../server/api/auth/session.get'
+import adminUserEnrollmentsGetHandler from '../../../server/api/admin/users/[userId]/enrollments/index.get'
+import adminUserEnrollmentsPatchHandler from '../../../server/api/admin/users/[userId]/enrollments/index.patch'
 
 const sampleUser = {
   id: 'user-1',
@@ -194,10 +205,10 @@ describe('server auth endpoints', () => {
       const event = {} as never
 
       readBody.mockResolvedValue({
-        classroomUuid: 'class-1',
         fullName: 'Jane Doe',
         cpf: '12345678900',
         email: 'jane@example.com',
+        phone: '75999999999',
         password: 'super-secret',
         region: 'sertao'
       })
@@ -206,10 +217,10 @@ describe('server auth endpoints', () => {
       const response = await registerHandler(event)
 
       expect(registerAccount).toHaveBeenCalledWith(event, {
-        classroomUuid: 'class-1',
         fullName: 'Jane Doe',
         cpf: '12345678900',
         email: 'jane@example.com',
+        phone: '75999999999',
         password: 'super-secret',
         region: 'sertao'
       })
@@ -225,12 +236,94 @@ describe('server auth endpoints', () => {
       await registerHandler(event)
 
       expect(registerAccount).toHaveBeenCalledWith(event, {
-        classroomUuid: '',
         fullName: '',
         cpf: '',
         email: '',
+        phone: null,
         password: '',
         region: 'feira-de-santana'
+      })
+    })
+  })
+
+  describe('admin user enrollment endpoints', () => {
+    const adminSession = {
+      user: {
+        ...sampleUser,
+        role: 'admin'
+      },
+      issuedAt: '2026-05-09T00:00:00.000Z'
+    }
+    const enrollmentData = {
+      user: {
+        id: 'user-1',
+        fullName: 'Jane Doe',
+        cpf: '12345678900',
+        email: 'jane@example.com',
+        role: 'student',
+        status: 'active',
+        region: 'feira-de-santana',
+        phone: null,
+        avatarUrl: null,
+        lastLoginAt: null,
+        createdAt: '2026-05-09T00:00:00.000Z',
+        updatedAt: '2026-05-09T00:00:00.000Z',
+        deletedAt: null,
+        createdBy: null,
+        updatedBy: null,
+        deletedBy: null
+      },
+      courses: [],
+      enrollments: []
+    }
+
+    it('requires an admin session to list user enrollments', async () => {
+      const event = {
+        context: {
+          params: {
+            userId: 'user-1'
+          }
+        }
+      } as never
+
+      requireAuthSession.mockResolvedValue(adminSession)
+      listAdminUserEnrollments.mockResolvedValue(enrollmentData)
+
+      const response = await adminUserEnrollmentsGetHandler(event)
+
+      expect(requireAuthSession).toHaveBeenCalledWith(event, { admin: true })
+      expect(listAdminUserEnrollments).toHaveBeenCalledWith(adminSession, 'user-1')
+      expect(response).toEqual({
+        status: 'success',
+        data: enrollmentData
+      })
+    })
+
+    it('requires an admin session to update user enrollments', async () => {
+      const event = {
+        context: {
+          params: {
+            userId: 'user-1'
+          }
+        }
+      } as never
+
+      requireAuthSession.mockResolvedValue(adminSession)
+      readBody.mockResolvedValue({
+        courseIds: ['course-1']
+      })
+      updateAdminUserEnrollments.mockResolvedValue(enrollmentData)
+
+      const response = await adminUserEnrollmentsPatchHandler(event)
+
+      expect(requireAuthSession).toHaveBeenCalledWith(event, { admin: true })
+      expect(updateAdminUserEnrollments).toHaveBeenCalledWith(adminSession, 'user-1', {
+        courseIds: ['course-1']
+      })
+      expect(response).toEqual({
+        status: 'success',
+        message: 'Matriculas atualizadas com sucesso.',
+        data: enrollmentData
       })
     })
   })

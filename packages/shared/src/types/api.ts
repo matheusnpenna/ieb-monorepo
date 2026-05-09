@@ -8,6 +8,7 @@ import type {
   AssessmentQuestionType,
   Classroom,
   Course,
+  CourseEnrollment,
   CourseModule,
   CourseVisibility,
   HighlightActionTarget,
@@ -171,6 +172,18 @@ export interface AdminUsersData {
 
 export type AdminUsersResponse = ApiResponse<AdminUsersData | null>
 export type AdminUserResponse = ApiResponse<User | null>
+
+export interface AdminUserEnrollmentsData {
+  user: User
+  courses: Course[]
+  enrollments: CourseEnrollment[]
+}
+
+export interface AdminUserEnrollmentsInput {
+  courseIds: string[]
+}
+
+export type AdminUserEnrollmentsResponse = ApiResponse<AdminUserEnrollmentsData | null>
 
 export interface AdminUploadedImageData {
   url: string

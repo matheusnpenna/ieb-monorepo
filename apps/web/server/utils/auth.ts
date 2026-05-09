@@ -3,9 +3,9 @@ import type {
   AuthSessionContext,
   AuthSessionUser,
   Classroom,
-  CourseEnrollment,
   RegistrationStatusResponse,
-  User
+  User,
+  UserRegion
 } from '@ieb/shared'
 import { createError, deleteCookie, getHeader, getCookie, getRequestProtocol, setCookie, type H3Event } from 'h3'
 import { getFirebaseAdminAuth, getFirebaseAdminCollection, getFirebaseAdminFirestore } from './firebase-admin'
@@ -21,11 +21,11 @@ interface SessionRuntimeConfig {
 }
 
 interface RegisterAccountInput {
-  classroomUuid: string
   fullName: string
   cpf: string
   email: string
   password: string
+  phone: string | null
   region: User['region']
 }
 
@@ -47,6 +47,7 @@ const REGISTRATION_CLOSED_MESSAGE =
   'Periodo de cadastro encerrado. Para saber mais, entre em contato com o suporte responsável'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const VALID_REGIONS = new Set<UserRegion>(['feira-de-santana', 'panambi', 'sertao', 'aluno-externo'])
 
 const getSessionConfig = () => useRuntimeConfig() as unknown as SessionRuntimeConfig
 
@@ -54,6 +55,11 @@ const toTimestamp = () => new Date().toISOString()
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase()
 const normalizeCpf = (value: string) => value.replace(/\D/g, '')
+const normalizeOptionalText = (value: string | null | undefined) => {
+  const normalizedValue = typeof value === 'string' ? value.trim() : ''
+
+  return normalizedValue ? normalizedValue : null
+}
 
 const createHttpError = (statusCode: number, statusMessage: string) =>
   createError({
@@ -359,16 +365,6 @@ export const getRegistrationStatus = async (classroomUuid: string): Promise<Regi
   }
 }
 
-const assertRegistrationIsOpen = async (classroomUuid: string) => {
-  const classroom = await getClassroomByUuid(classroomUuid)
-
-  if (!classroom || !isRegistrationWindowOpen(classroom)) {
-    throw createHttpError(403, REGISTRATION_CLOSED_MESSAGE)
-  }
-
-  return classroom
-}
-
 const assertEmailAndPassword = (email: string, password: string) => {
   if (!EMAIL_REGEX.test(email)) {
     throw createHttpError(400, 'Informe um e-mail valido.')
@@ -388,8 +384,8 @@ const assertRegisterPayload = (input: RegisterAccountInput) => {
     throw createHttpError(400, 'Informe um CPF valido.')
   }
 
-  if (!input.classroomUuid.trim()) {
-    throw createHttpError(400, REGISTRATION_CLOSED_MESSAGE)
+  if (!VALID_REGIONS.has(input.region)) {
+    throw createHttpError(400, 'Informe uma regiao valida.')
   }
 
   assertEmailAndPassword(input.email, input.password)
@@ -427,13 +423,10 @@ export const loginWithEmailAndPassword = async (event: H3Event, input: { email: 
   return session.user
 }
 
-const createUserAndEnrollments = async (uid: string, input: RegisterAccountInput, classroom: Classroom) => {
-  const firestore = getFirebaseAdminFirestore()
-  const batch = firestore.batch()
+const createRegisteredStudentDocument = async (uid: string, input: RegisterAccountInput) => {
   const now = toTimestamp()
   const normalizedEmail = normalizeEmail(input.email)
   const normalizedCpf = normalizeCpf(input.cpf)
-  const userRef = getFirebaseAdminCollection('users', firestore).doc(uid)
 
   const userDocument: User = {
     id: uid,
@@ -442,7 +435,7 @@ const createUserAndEnrollments = async (uid: string, input: RegisterAccountInput
     fullName: input.fullName.trim(),
     cpf: normalizedCpf,
     email: normalizedEmail,
-    phone: null,
+    phone: normalizeOptionalText(input.phone),
     avatarUrl: null,
     region: input.region,
     lastLoginAt: now,
@@ -454,31 +447,7 @@ const createUserAndEnrollments = async (uid: string, input: RegisterAccountInput
     deletedBy: null
   }
 
-  batch.set(userRef, userDocument)
-
-  classroom.linkedCourseIds.forEach((courseId) => {
-    const enrollmentRef = getFirebaseAdminCollection('enrollments', firestore).doc()
-    const enrollment: CourseEnrollment = {
-      id: enrollmentRef.id,
-      userId: uid,
-      classroomId: classroom.id,
-      courseId,
-      status: 'active',
-      startedAt: now,
-      completedAt: null,
-      certificateIssuedAt: null,
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-      createdBy: null,
-      updatedBy: null,
-      deletedBy: null
-    }
-
-    batch.set(enrollmentRef, enrollment)
-  })
-
-  await batch.commit()
+  await getFirebaseAdminCollection('users').doc(uid).set(userDocument)
 
   return userDocument
 }
@@ -486,7 +455,6 @@ const createUserAndEnrollments = async (uid: string, input: RegisterAccountInput
 export const registerAccount = async (event: H3Event, input: RegisterAccountInput) => {
   const normalizedEmail = normalizeEmail(input.email)
   const normalizedCpf = normalizeCpf(input.cpf)
-  const classroom = await assertRegistrationIsOpen(input.classroomUuid.trim())
 
   assertRegisterPayload({
     ...input,
@@ -509,7 +477,11 @@ export const registerAccount = async (event: H3Event, input: RegisterAccountInpu
 
     firebaseUserId = signUpResponse.localId
 
-    const userDocument = await createUserAndEnrollments(firebaseUserId, { ...input, email: normalizedEmail, cpf: normalizedCpf }, classroom)
+    const userDocument = await createRegisteredStudentDocument(firebaseUserId, {
+      ...input,
+      email: normalizedEmail,
+      cpf: normalizedCpf
+    })
 
     await setAuthSessionCookie(event, signUpResponse.idToken)
 

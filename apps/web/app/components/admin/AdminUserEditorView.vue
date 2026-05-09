@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import type { AdminUploadedImageResponse, AdminUserInput, AdminUserResponse, UserRegion, UserStatus } from '@ieb/shared'
+import type {
+  AdminUploadedImageResponse,
+  AdminUserEnrollmentsResponse,
+  AdminUserInput,
+  AdminUserResponse,
+  CourseEnrollment,
+  UserRegion,
+  UserStatus
+} from '@ieb/shared'
 import AdminImageUploadField from './AdminImageUploadField.vue'
 import PageIntro from '../base/PageIntro.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
@@ -53,6 +61,11 @@ const defaultUserResponse = {
   data: null
 } satisfies AdminUserResponse
 
+const defaultEnrollmentsResponse = {
+  status: 'success',
+  data: null
+} satisfies AdminUserEnrollmentsResponse
+
 const { data: userResponse, pending: userPending } = await useAsyncData<AdminUserResponse>(
   () => `admin-user-editor-${props.userId || 'new'}`,
   () => {
@@ -70,8 +83,27 @@ const { data: userResponse, pending: userPending } = await useAsyncData<AdminUse
   }
 )
 
+const { data: enrollmentsResponse, pending: enrollmentsPending } = await useAsyncData<AdminUserEnrollmentsResponse>(
+  () => `admin-user-enrollments-${props.userId || 'new'}`,
+  () => {
+    if (props.mode !== 'edit' || !props.userId) {
+      return Promise.resolve(defaultEnrollmentsResponse)
+    }
+
+    return $fetch(`/api/admin/users/${props.userId}/enrollments`, {
+      credentials: 'include',
+      ignoreResponseError: true
+    })
+  },
+  {
+    default: () => defaultEnrollmentsResponse
+  }
+)
+
 const userForm = ref<AdminUserInput>(buildEmptyUserForm())
+const enrollmentFormCourseIds = ref<string[]>([])
 const submitPending = ref(false)
+const enrollmentsSubmitPending = ref(false)
 const deletePending = ref(false)
 const assetUploadPending = ref<AssetField | null>(null)
 const selectedFiles = reactive<Record<AssetField, File | null>>({
@@ -82,6 +114,9 @@ const feedbackTone = ref<FeedbackTone>('success')
 
 const isEditing = computed(() => props.mode === 'edit')
 const currentUser = computed(() => (userResponse.value?.status === 'success' ? userResponse.value.data : null))
+const currentEnrollmentsData = computed(() =>
+  enrollmentsResponse.value?.status === 'success' ? enrollmentsResponse.value.data : null
+)
 const submitLabel = computed(() => (isEditing.value ? 'Salvar alteracoes' : 'Criar usuario'))
 const isAdminRole = computed<boolean>({
   get: () => userForm.value.role === 'admin',
@@ -102,6 +137,17 @@ const userErrorMessage = computed(() => {
 
   return userResponse.value.messages[0] || 'Nao foi possivel carregar o usuario.'
 })
+const enrollmentsErrorMessage = computed(() => {
+  if (!enrollmentsResponse.value || enrollmentsResponse.value.status !== 'error') {
+    return ''
+  }
+
+  return enrollmentsResponse.value.messages[0] || 'Nao foi possivel carregar as matriculas.'
+})
+const isCurrentEnrollment = (enrollment: CourseEnrollment) =>
+  !enrollment.deletedAt && (enrollment.status === 'active' || enrollment.status === 'completed')
+const enrollmentOptions = computed(() => currentEnrollmentsData.value?.courses || [])
+
 watch(
   currentUser,
   (user) => {
@@ -123,6 +169,14 @@ watch(
       avatarUrl: user.avatarUrl,
       region: user.region
     }
+  },
+  { immediate: true }
+)
+
+watch(
+  currentEnrollmentsData,
+  (data) => {
+    enrollmentFormCourseIds.value = data?.enrollments.filter(isCurrentEnrollment).map((enrollment) => enrollment.courseId) || []
   },
   { immediate: true }
 )
@@ -236,6 +290,51 @@ const uploadImageAsset = async (field: AssetField) => {
     feedbackMessage.value = getRequestErrorMessage(error, 'Nao foi possivel enviar a imagem.')
   } finally {
     assetUploadPending.value = null
+  }
+}
+
+const isCourseSelected = (courseId: string) => enrollmentFormCourseIds.value.includes(courseId)
+
+const setCourseEnrollment = (courseId: string, isSelected: boolean) => {
+  if (isSelected && !isCourseSelected(courseId)) {
+    enrollmentFormCourseIds.value = [...enrollmentFormCourseIds.value, courseId]
+    return
+  }
+
+  if (!isSelected) {
+    enrollmentFormCourseIds.value = enrollmentFormCourseIds.value.filter((selectedCourseId) => selectedCourseId !== courseId)
+  }
+}
+
+const saveEnrollments = async () => {
+  if (!props.userId || enrollmentsSubmitPending.value) {
+    return
+  }
+
+  enrollmentsSubmitPending.value = true
+  feedbackMessage.value = ''
+
+  try {
+    const response = await $fetch<AdminUserEnrollmentsResponse>(`/api/admin/users/${props.userId}/enrollments`, {
+      method: 'PATCH',
+      credentials: 'include',
+      body: {
+        courseIds: enrollmentFormCourseIds.value
+      }
+    })
+
+    if (response.status !== 'success' || !response.data) {
+      throw new Error('Nao foi possivel atualizar as matriculas.')
+    }
+
+    enrollmentsResponse.value = response
+    feedbackTone.value = 'success'
+    feedbackMessage.value = response.message || 'Matriculas atualizadas com sucesso.'
+  } catch (error) {
+    feedbackTone.value = 'error'
+    feedbackMessage.value = getRequestErrorMessage(error, 'Nao foi possivel atualizar as matriculas.')
+  } finally {
+    enrollmentsSubmitPending.value = false
   }
 }
 
@@ -440,6 +539,58 @@ const onDeleteRequest = () => {
         </div>
       </form>
     </SurfaceCard>
+
+    <SurfaceCard v-if="isEditing" class="section-stack">
+      <div class="section-stack">
+        <span class="eyebrow">Matriculas</span>
+        <h2 class="section-title enrollment-title">Cursos do aluno</h2>
+        <p class="body-copy">
+          O cadastro publico nao matricula alunos automaticamente. Marque aqui os cursos que este usuario pode acessar.
+        </p>
+      </div>
+
+      <UiSpinner v-if="enrollmentsPending" size="lg" label="Carregando matriculas">
+        <span class="body-copy">Carregando matriculas...</span>
+      </UiSpinner>
+
+      <p v-else-if="enrollmentsErrorMessage" class="feedback-message" data-tone="error">
+        {{ enrollmentsErrorMessage }}
+      </p>
+
+      <div v-else class="section-stack">
+        <p v-if="enrollmentOptions.length === 0" class="body-copy">
+          Nenhum curso disponivel para matricula no momento.
+        </p>
+
+        <div v-else class="enrollment-grid">
+          <UiCheckbox
+            v-for="course in enrollmentOptions"
+            :key="course.id"
+            :model-value="isCourseSelected(course.id)"
+            :disabled="enrollmentsSubmitPending"
+            @update:model-value="setCourseEnrollment(course.id, $event)"
+          >
+            <span class="enrollment-option-copy">
+              <strong>{{ course.title }}</strong>
+              <span class="body-copy">{{ course.shortDescription || course.description }}</span>
+            </span>
+          </UiCheckbox>
+        </div>
+
+        <div class="form-actions">
+          <UiButton
+            type="button"
+            variant="primary"
+            size="lg"
+            :loading="enrollmentsSubmitPending"
+            :disabled="enrollmentsSubmitPending || enrollmentOptions.length === 0"
+            @click="saveEnrollments"
+          >
+            Salvar matriculas
+          </UiButton>
+        </div>
+      </div>
+    </SurfaceCard>
   </div>
 </template>
 
@@ -459,13 +610,33 @@ const onDeleteRequest = () => {
   gap: 0.35rem;
 }
 
+.enrollment-title {
+  font-size: clamp(1.2rem, 1.8vw, 1.7rem);
+}
+
+.enrollment-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.enrollment-option-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.enrollment-option-copy strong {
+  line-height: 1.35;
+}
+
 .admin-role-toggle-copy strong {
   font-size: 1rem;
   line-height: 1.35;
 }
 
 @media (max-width: 960px) {
-  .user-form-grid {
+  .user-form-grid,
+  .enrollment-grid {
     grid-template-columns: 1fr;
   }
 }
