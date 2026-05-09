@@ -92,13 +92,43 @@ describe('admin users api', () => {
 
   it('lists admin users', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    listAdminUsersForManagement.mockResolvedValue([sampleUser])
+    listAdminUsersForManagement.mockResolvedValue({
+      items: [sampleUser],
+      pagination: {
+        page: 1,
+        pageSize: 12,
+        totalItems: 1,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false
+      }
+    })
 
-    const response = await listUsersHandler({} as never)
+    const response = await listUsersHandler({
+      node: {
+        req: {
+          url: '/api/admin/users?page=1&pageSize=12'
+        }
+      }
+    } as never)
 
     expect(response).toEqual({
       status: 'success',
-      data: [sampleUser]
+      data: {
+        items: [sampleUser],
+        pagination: {
+          page: 1,
+          pageSize: 12,
+          totalItems: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false
+        }
+      }
+    })
+    expect(listAdminUsersForManagement).toHaveBeenCalledWith(sampleSession, {
+      page: undefined,
+      pageSize: undefined
     })
   })
 

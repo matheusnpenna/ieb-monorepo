@@ -97,9 +97,20 @@ describe('users utils', () => {
       throw new Error(`Unexpected collection ${collectionName}`)
     })
 
-    const users = await listAdminUsersForManagement(adminSession)
+    const response = await listAdminUsersForManagement(adminSession, {
+      page: 1,
+      pageSize: 1
+    })
 
-    expect(users.map((user) => user.fullName)).toEqual(['Ana', 'Zeca'])
+    expect(response.items.map((user) => user.fullName)).toEqual(['Ana'])
+    expect(response.pagination).toEqual({
+      page: 1,
+      pageSize: 1,
+      totalItems: 2,
+      totalPages: 2,
+      hasNextPage: true,
+      hasPreviousPage: false
+    })
   })
 
   it('creates, updates, loads and soft deletes a user while syncing Firebase Authentication', async () => {

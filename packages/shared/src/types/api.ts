@@ -155,7 +155,21 @@ export interface AdminUserInput {
   region: UserRegion
 }
 
-export type AdminUsersResponse = ApiResponse<User[]>
+export interface AdminUsersPagination {
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
+
+export interface AdminUsersData {
+  items: User[]
+  pagination: AdminUsersPagination
+}
+
+export type AdminUsersResponse = ApiResponse<AdminUsersData | null>
 export type AdminUserResponse = ApiResponse<User | null>
 
 export interface AdminUploadedImageData {

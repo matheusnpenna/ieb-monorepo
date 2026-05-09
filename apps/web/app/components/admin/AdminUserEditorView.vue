@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { AdminUploadedImageResponse, AdminUserInput, AdminUserResponse, UserRegion, UserRole, UserStatus } from '@ieb/shared'
+import type { AdminUploadedImageResponse, AdminUserInput, AdminUserResponse, UserRegion, UserStatus } from '@ieb/shared'
 import AdminImageUploadField from './AdminImageUploadField.vue'
 import PageIntro from '../base/PageIntro.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
 import UiButton from '../ui/UiButton.vue'
+import UiCheckbox from '../ui/UiCheckbox.vue'
 import UiField from '../ui/UiField.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiSelect from '../ui/UiSelect.vue'
@@ -21,11 +22,6 @@ const props = defineProps<{
 
 const route = useRoute()
 const { openConfirmationModal } = useConfirmationModal()
-
-const roleOptions: Array<{ value: UserRole; label: string }> = [
-  { value: 'student', label: 'Aluno' },
-  { value: 'admin', label: 'Administrador' }
-]
 
 const statusOptions: Array<{ value: UserStatus; label: string }> = [
   { value: 'active', label: 'Ativo' },
@@ -87,6 +83,12 @@ const feedbackTone = ref<FeedbackTone>('success')
 const isEditing = computed(() => props.mode === 'edit')
 const currentUser = computed(() => (userResponse.value?.status === 'success' ? userResponse.value.data : null))
 const submitLabel = computed(() => (isEditing.value ? 'Salvar alteracoes' : 'Criar usuario'))
+const isAdminRole = computed<boolean>({
+  get: () => userForm.value.role === 'admin',
+  set: (value) => {
+    userForm.value.role = value ? 'admin' : 'student'
+  }
+})
 const pageTitle = computed(() => (isEditing.value ? 'Editar usuario' : 'Novo usuario'))
 const pageDescription = computed(() =>
   isEditing.value
@@ -148,6 +150,53 @@ const buildPayload = (): AdminUserInput => ({
   region: userForm.value.region
 })
 
+const persistUser = async () => {
+  const response = await $fetch<AdminUserResponse>(
+    isEditing.value ? `/api/admin/users/${props.userId}` : '/api/admin/users',
+    {
+      method: isEditing.value ? 'PATCH' : 'POST',
+      credentials: 'include',
+      body: buildPayload()
+    }
+  )
+
+  if (response.status !== 'success' || !response.data) {
+    throw new Error('Nao foi possivel salvar o usuario.')
+  }
+
+  if (isEditing.value) {
+    feedbackTone.value = 'success'
+    feedbackMessage.value = 'Usuario atualizado com sucesso.'
+    userResponse.value = {
+      status: 'success',
+      data: response.data
+    }
+    userForm.value.password = ''
+    return
+  }
+
+  await navigateTo(`/admin/usuarios/${response.data.id}?status=created`)
+}
+
+const submitUser = async () => {
+  if (submitPending.value) {
+    return
+  }
+
+  submitPending.value = true
+  feedbackMessage.value = ''
+
+  try {
+    await persistUser()
+  } catch (error) {
+    feedbackTone.value = 'error'
+    feedbackMessage.value = getRequestErrorMessage(error, 'Nao foi possivel salvar o usuario.')
+    throw error
+  } finally {
+    submitPending.value = false
+  }
+}
+
 const onFileSelected = (field: AssetField, event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFiles[field] = input.files?.[0] || null
@@ -195,41 +244,34 @@ const onSubmit = async () => {
     return
   }
 
-  submitPending.value = true
-  feedbackMessage.value = ''
+  const isPromotingToAdmin = userForm.value.role === 'admin' && currentUser.value?.role !== 'admin'
+
+  if (isPromotingToAdmin) {
+    openConfirmationModal({
+      title: 'Conceder acesso administrativo',
+      message:
+        'Este usuario passara a acessar o painel administrativo e podera gerenciar os dados da plataforma. Deseja continuar?',
+      actions: [
+        {
+          id: 'cancel',
+          label: 'Cancelar',
+          variant: 'secondary'
+        },
+        {
+          id: 'confirm',
+          label: 'Tornar administrador',
+          variant: 'primary',
+          errorMessage: 'Nao foi possivel salvar o usuario.',
+          onClick: submitUser
+        }
+      ]
+    })
+    return
+  }
 
   try {
-    const response = await $fetch<AdminUserResponse>(
-      isEditing.value ? `/api/admin/users/${props.userId}` : '/api/admin/users',
-      {
-        method: isEditing.value ? 'PATCH' : 'POST',
-        credentials: 'include',
-        body: buildPayload()
-      }
-    )
-
-    if (response.status !== 'success' || !response.data) {
-      throw new Error('Nao foi possivel salvar o usuario.')
-    }
-
-    if (isEditing.value) {
-      feedbackTone.value = 'success'
-      feedbackMessage.value = 'Usuario atualizado com sucesso.'
-      userResponse.value = {
-        status: 'success',
-        data: response.data
-      }
-      userForm.value.password = ''
-      return
-    }
-
-    await navigateTo(`/admin/usuarios/${response.data.id}?status=created`)
-  } catch (error) {
-    feedbackTone.value = 'error'
-    feedbackMessage.value = getRequestErrorMessage(error, 'Nao foi possivel salvar o usuario.')
-  } finally {
-    submitPending.value = false
-  }
+    await submitUser()
+  } catch {}
 }
 
 const onDeleteConfirmed = async () => {
@@ -321,12 +363,23 @@ const onDeleteRequest = () => {
             <UiInput v-model="userForm.password" type="password" placeholder="******" />
           </UiField>
 
-          <UiField label="Perfil" required>
-            <UiSelect v-model="userForm.role">
-              <option v-for="option in roleOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
-            </UiSelect>
+          <UiField
+            label="Acesso administrativo"
+            required
+            hint="Ative esta opcao para permitir que o usuario acesse e gerencie o painel administrativo."
+          >
+            <UiCheckbox v-model="isAdminRole">
+              <span class="admin-role-toggle-copy">
+                <strong>{{ isAdminRole ? 'Administrador da plataforma' : 'Aluno da plataforma' }}</strong>
+                <span class="body-copy">
+                  {{
+                    isAdminRole
+                      ? 'Este usuario tera acesso ao painel administrativo.'
+                      : 'Este usuario acessara apenas a plataforma de conteudo.'
+                  }}
+                </span>
+              </span>
+            </UiCheckbox>
           </UiField>
 
           <UiField label="Status" required>
@@ -399,6 +452,16 @@ const onDeleteRequest = () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.admin-role-toggle-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-role-toggle-copy strong {
+  font-size: 1rem;
+  line-height: 1.35;
 }
 
 @media (max-width: 960px) {

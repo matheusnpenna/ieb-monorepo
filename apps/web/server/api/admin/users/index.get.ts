@@ -1,5 +1,5 @@
 import type { AdminUsersResponse, AuthSessionContext } from '@ieb/shared'
-import { defineEventHandler, setResponseStatus } from 'h3'
+import { defineEventHandler, getQuery, setResponseStatus } from 'h3'
 import { requireAuthSession, writeAdminLog } from '../../../utils/auth'
 import { listAdminUsersForManagement } from '../../../utils/users'
 
@@ -8,7 +8,13 @@ export default defineEventHandler(async (event): Promise<AdminUsersResponse> => 
 
   try {
     session = await requireAuthSession(event, { admin: true })
-    const users = await listAdminUsersForManagement(session)
+    const query = getQuery(event)
+    const page = typeof query.page === 'string' ? Number(query.page) : undefined
+    const pageSize = typeof query.pageSize === 'string' ? Number(query.pageSize) : undefined
+    const users = await listAdminUsersForManagement(session, {
+      page,
+      pageSize
+    })
 
     return {
       status: 'success',
@@ -50,7 +56,7 @@ export default defineEventHandler(async (event): Promise<AdminUsersResponse> => 
     return {
       status: 'error',
       messages: [statusMessage],
-      data: []
+      data: null
     }
   }
 })

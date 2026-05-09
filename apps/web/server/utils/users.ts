@@ -1,9 +1,11 @@
-import type { AdminUserInput, AuthSessionContext, User, UserRegion, UserRole, UserStatus } from '@ieb/shared'
+import type { AdminUserInput, AdminUsersData, AuthSessionContext, User, UserRegion, UserRole, UserStatus } from '@ieb/shared'
 import { createError } from 'h3'
 import { writeAdminLog } from './auth'
 import { getFirebaseAdminAuth, getFirebaseAdminCollection } from './firebase-admin'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const DEFAULT_ADMIN_USERS_PAGE_SIZE = 12
+const MAX_ADMIN_USERS_PAGE_SIZE = 100
 
 const VALID_ROLES = new Set<UserRole>(['admin', 'student'])
 const VALID_STATUSES = new Set<UserStatus>(['invited', 'active', 'blocked'])
@@ -38,6 +40,14 @@ const listAdminUsers = async () => {
     .map(toUserDocument)
     .filter((user) => !user.deletedAt)
     .sort((left, right) => left.fullName.localeCompare(right.fullName, 'pt-BR'))
+}
+
+const normalizePositiveInteger = (value: number | undefined, fallbackValue: number) => {
+  if (!Number.isFinite(value)) {
+    return fallbackValue
+  }
+
+  return Math.max(1, Math.trunc(value as number))
 }
 
 const getUserById = async (userId: string) => {
@@ -170,12 +180,40 @@ const buildUserPayload = async (
   }
 }
 
-export const listAdminUsersForManagement = async (session: AuthSessionContext): Promise<User[]> => {
+export const listAdminUsersForManagement = async (
+  session: AuthSessionContext,
+  options?: {
+    page?: number
+    pageSize?: number
+  }
+): Promise<AdminUsersData> => {
   if (session.user.role !== 'admin') {
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  return await listAdminUsers()
+  const users = await listAdminUsers()
+  const pageSize = Math.min(
+    normalizePositiveInteger(options?.pageSize, DEFAULT_ADMIN_USERS_PAGE_SIZE),
+    MAX_ADMIN_USERS_PAGE_SIZE
+  )
+  const totalItems = users.length
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 1
+  const requestedPage = normalizePositiveInteger(options?.page, 1)
+  const page = Math.min(requestedPage, totalPages)
+  const startIndex = (page - 1) * pageSize
+  const items = users.slice(startIndex, startIndex + pageSize)
+
+  return {
+    items,
+    pagination: {
+      page,
+      pageSize,
+      totalItems,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1
+    }
+  }
 }
 
 export const getAdminUserById = async (session: AuthSessionContext, userId: string): Promise<User> => {

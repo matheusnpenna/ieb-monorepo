@@ -6,6 +6,8 @@ import UiButton from '../ui/UiButton.vue'
 import UiInput from '../ui/UiInput.vue'
 import UiSpinner from '../ui/UiSpinner.vue'
 
+const PAGE_SIZE = 12
+
 const formatRole = (value: User['role']) => (value === 'admin' ? 'Administrador' : 'Aluno')
 
 const formatStatus = (value: User['status']) => {
@@ -41,17 +43,32 @@ const formatTimestamp = (value: string | null) => {
 
 const defaultUsersResponse = {
   status: 'success',
-  data: []
+  data: {
+    items: [],
+    pagination: {
+      page: 1,
+      pageSize: PAGE_SIZE,
+      totalItems: 0,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPreviousPage: false
+    }
+  }
 } satisfies AdminUsersResponse
 
 const searchTerm = ref('')
+const currentPage = ref(1)
 
 const { data: usersResponse, pending: usersPending } = await useAsyncData<AdminUsersResponse>(
-  'admin-users-list',
+  () => `admin-users-list-${currentPage.value}`,
   () =>
     $fetch('/api/admin/users', {
       credentials: 'include',
-      ignoreResponseError: true
+      ignoreResponseError: true,
+      query: {
+        page: currentPage.value,
+        pageSize: PAGE_SIZE
+      }
     }),
   {
     default: () => defaultUsersResponse
@@ -59,11 +76,19 @@ const { data: usersResponse, pending: usersPending } = await useAsyncData<AdminU
 )
 
 const users = computed(() => {
-  if (!usersResponse.value || usersResponse.value.status !== 'success') {
+  if (!usersResponse.value || usersResponse.value.status !== 'success' || !usersResponse.value.data) {
     return []
   }
 
-  return [...usersResponse.value.data].sort((left, right) => left.fullName.localeCompare(right.fullName, 'pt-BR'))
+  return usersResponse.value.data.items
+})
+
+const pagination = computed(() => {
+  if (!usersResponse.value || usersResponse.value.status !== 'success' || !usersResponse.value.data) {
+    return defaultUsersResponse.data.pagination
+  }
+
+  return usersResponse.value.data.pagination
 })
 
 const filteredUsers = computed(() => {
@@ -86,6 +111,22 @@ const usersErrorMessage = computed(() => {
 
   return usersResponse.value.messages[0] || 'Nao foi possivel carregar os usuarios do painel.'
 })
+
+const goToPreviousPage = async () => {
+  if (!pagination.value.hasPreviousPage || usersPending.value) {
+    return
+  }
+
+  currentPage.value -= 1
+}
+
+const goToNextPage = async () => {
+  if (!pagination.value.hasNextPage || usersPending.value) {
+    return
+  }
+
+  currentPage.value += 1
+}
 </script>
 
 <template>
@@ -118,7 +159,17 @@ const usersErrorMessage = computed(() => {
           Nenhum usuario encontrado com este filtro.
         </p>
 
-        <ul v-else class="list-clean user-list">
+        <template v-else>
+          <div class="list-pagination-summary">
+            <span class="body-copy">
+              Pagina {{ pagination.page }} de {{ pagination.totalPages }}
+            </span>
+            <span class="body-copy">
+              {{ pagination.totalItems }} usuario(s) cadastrados
+            </span>
+          </div>
+
+          <ul class="list-clean user-list">
           <li v-for="user in filteredUsers" :key="user.id">
             <SurfaceCard as="article">
               <div class="section-stack user-card">
@@ -146,7 +197,30 @@ const usersErrorMessage = computed(() => {
               </div>
             </SurfaceCard>
           </li>
-        </ul>
+          </ul>
+
+          <div class="list-pagination-actions">
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              :disabled="!pagination.hasPreviousPage || usersPending"
+              @click="goToPreviousPage"
+            >
+              Pagina anterior
+            </UiButton>
+
+            <UiButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="!pagination.hasNextPage || usersPending"
+              @click="goToNextPage"
+            >
+              Proxima pagina
+            </UiButton>
+          </div>
+        </template>
       </div>
     </SurfaceCard>
   </div>
@@ -163,6 +237,15 @@ const usersErrorMessage = computed(() => {
 .user-list {
   display: grid;
   gap: 1rem;
+}
+
+.list-pagination-summary,
+.list-pagination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .user-card {
@@ -201,6 +284,12 @@ const usersErrorMessage = computed(() => {
 @media (max-width: 768px) {
   .list-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .list-pagination-summary,
+  .list-pagination-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>
