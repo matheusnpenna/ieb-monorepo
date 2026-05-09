@@ -12,7 +12,12 @@ export type EnrollmentStatus = 'pending' | 'active' | 'completed' | 'cancelled'
 export type CourseVisibility = 'draft' | 'published' | 'archived'
 export type LessonContentType = 'video' | 'text' | 'audio'
 export type VideoProvider = 'youtube' | 'vimeo' | 'upload' | 'embed'
+export type AssessmentQuestionType = 'multiple_choice' | 'free_text'
+export type AssessmentAttemptStatus = 'pending_review' | 'graded'
 export type HighlightKind = 'news' | 'course' | 'announcement'
+export type HighlightMediaType = 'image' | 'video'
+export type HighlightActionTarget = '_self' | '_blank'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'success'
 export type AdminActionType =
   | 'create'
   | 'update'
@@ -126,6 +131,7 @@ export interface Assessment extends AuditedDocument {
   title: string
   slug: string
   description: string
+  questionType: AssessmentQuestionType
   passingScore: number
   timeLimitInMinutes: number | null
   questions: AssessmentQuestion[]
@@ -167,10 +173,18 @@ export interface AssessmentAttempt extends AuditedDocument {
   courseId: string
   moduleId: string
   assessmentId: string
-  score: number
-  approved: boolean
-  answers: Record<string, string[]>
+  attemptNumber: number
+  status: AssessmentAttemptStatus
+  score: number | null
+  approved: boolean | null
+  answers: Record<string, string | string[]>
   submittedAt: TimestampValue | null
+  gradedAt: TimestampValue | null
+  gradedBy: string | null
+}
+
+export interface AssessmentPlatformSettings extends AuditedDocument {
+  maxAttemptsPerAssessment: number
 }
 
 export interface Certificate extends AuditedDocument {
@@ -186,9 +200,16 @@ export interface PlatformHighlight extends AuditedDocument {
   kind: HighlightKind
   title: string
   description: string
-  imageUrl: string | null
-  ctaLabel: string | null
-  ctaHref: string | null
+  isActive: boolean
+  mediaType: HighlightMediaType | null
+  mediaUrl: string | null
+  actions: Array<{
+    id: string
+    label: string
+    href: string
+    target: HighlightActionTarget
+    variant: ButtonVariant
+  }>
   order: number
   publishedAt: TimestampValue | null
 }
@@ -215,6 +236,7 @@ export type FirestoreCollections =
   | 'lessonProgress'
   | 'moduleProgress'
   | 'assessmentAttempts'
+  | 'platformSettings'
   | 'certificates'
   | 'highlights'
   | 'adminLogs'

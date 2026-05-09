@@ -1,4 +1,26 @@
-import type { Assessment, Course, CourseModule, Lesson } from './database'
+import type {
+  ButtonVariant,
+  AdminActivityLog,
+  Assessment,
+  AssessmentAttempt,
+  AssessmentAttemptStatus,
+  AssessmentPlatformSettings,
+  AssessmentQuestionType,
+  Classroom,
+  Course,
+  CourseModule,
+  CourseVisibility,
+  HighlightActionTarget,
+  HighlightMediaType,
+  Lesson,
+  LessonContentType,
+  PlatformHighlight,
+  User,
+  UserRegion,
+  UserRole,
+  UserStatus,
+  VideoProvider
+} from './database'
 
 export interface ApiSuccessResponse<T> {
   status: 'success'
@@ -32,6 +54,151 @@ export interface HomeMetricsData {
 }
 
 export type HomeMetricsResponse = ApiResponse<HomeMetricsData | null>
+
+export interface AdminCourseInput {
+  title: string
+  slug: string
+  shortDescription: string
+  description: string
+  visibility: CourseVisibility
+  coverImageUrl: string | null
+  heroImageUrl: string | null
+  totalDurationInMinutes: number
+  requiredCompletionRate: number
+  certificateEnabled: boolean
+}
+
+export type AdminCoursesResponse = ApiResponse<Course[]>
+export type AdminCourseResponse = ApiResponse<Course | null>
+
+export interface AdminModuleInput {
+  courseId: string
+  title: string
+  slug: string
+  description: string
+  order: number
+  estimatedDurationInMinutes: number
+}
+
+export type AdminModulesResponse = ApiResponse<CourseModule[]>
+export type AdminModuleResponse = ApiResponse<CourseModule | null>
+
+export interface AdminLessonInput {
+  courseId: string
+  moduleId: string
+  title: string
+  slug: string
+  description: string
+  order: number
+  contentType: LessonContentType
+  videoProvider: VideoProvider | null
+  mediaUrl: string | null
+  thumbnailUrl: string | null
+  durationInMinutes: number
+  bodyContent: string | null
+  allowManualCompletion: boolean
+}
+
+export type AdminLessonsResponse = ApiResponse<Lesson[]>
+export type AdminLessonResponse = ApiResponse<Lesson | null>
+
+export interface AdminAssessmentQuestionOptionInput {
+  id: string
+  label: string
+  isCorrect: boolean
+}
+
+export interface AdminAssessmentQuestionInput {
+  id: string
+  prompt: string
+  explanation: string | null
+  options: AdminAssessmentQuestionOptionInput[]
+}
+
+export interface AdminAssessmentInput {
+  courseId: string
+  moduleId: string
+  title: string
+  slug: string
+  description: string
+  questionType: AssessmentQuestionType
+  passingScore: number
+  timeLimitInMinutes: number | null
+  questions: AdminAssessmentQuestionInput[]
+}
+
+export type AdminAssessmentsResponse = ApiResponse<Assessment[]>
+export type AdminAssessmentResponse = ApiResponse<Assessment | null>
+
+export interface AdminClassroomInput {
+  name: string
+  uuid: string
+  description: string
+  registrationOpen: boolean
+  registrationStartsAt: string | null
+  registrationEndsAt: string | null
+  linkedCourseIds: string[]
+}
+
+export type AdminClassroomsResponse = ApiResponse<Classroom[]>
+export type AdminClassroomResponse = ApiResponse<Classroom | null>
+
+export interface AdminUserInput {
+  fullName: string
+  cpf: string
+  email: string
+  password: string | null
+  role: UserRole
+  status: UserStatus
+  phone: string | null
+  avatarUrl: string | null
+  region: UserRegion
+}
+
+export type AdminUsersResponse = ApiResponse<User[]>
+export type AdminUserResponse = ApiResponse<User | null>
+
+export interface AdminUploadedImageData {
+  url: string
+  path: string
+  filename: string
+}
+
+export type AdminUploadedImageResponse = ApiResponse<AdminUploadedImageData | null>
+
+export interface AdminLogsPagination {
+  nextCursor: string | null
+  pageSize: number
+}
+
+export interface AdminLogsData {
+  items: AdminActivityLog[]
+  pagination: AdminLogsPagination
+}
+
+export type AdminLogsResponse = ApiResponse<AdminLogsData | null>
+
+export interface AdminHighlightActionInput {
+  id: string
+  label: string
+  href: string
+  target: HighlightActionTarget
+  variant: ButtonVariant
+}
+
+export interface AdminHighlightInput {
+  title: string
+  description: string
+  isActive: boolean
+  mediaType: HighlightMediaType | null
+  mediaUrl: string | null
+  actions: AdminHighlightActionInput[]
+  order: number
+}
+
+export type AdminHighlightsResponse = ApiResponse<PlatformHighlight[]>
+export type AdminHighlightResponse = ApiResponse<PlatformHighlight | null>
+export type HomeHighlightsResponse = ApiResponse<PlatformHighlight[]>
 
 export interface CourseDetailActionLinks {
   startCourseHref: string | null
@@ -126,3 +293,101 @@ export interface LessonCommentItem {
 
 export type LessonCommentsResponse = ApiResponse<LessonCommentItem[]>
 export type LessonCommentResponse = ApiResponse<LessonCommentItem | null>
+
+export interface StudentAssessmentQuestionOption {
+  id: string
+  label: string
+}
+
+export interface StudentAssessmentQuestion {
+  id: string
+  prompt: string
+  options: StudentAssessmentQuestionOption[]
+}
+
+export interface StudentAssessmentItem {
+  id: string
+  slug: string
+  title: string
+  description: string
+  questionType: AssessmentQuestionType
+  passingScore: number
+  timeLimitInMinutes: number | null
+  questionCount: number
+  availability: 'available' | 'blocked_pending_review' | 'blocked_attempt_limit'
+  blockingMessage: string | null
+  attemptsUsed: number
+  attemptsRemaining: number
+  maxAttempts: number
+  latestAttempt: {
+    id: string
+    attemptNumber: number
+    status: AssessmentAttemptStatus
+    score: number | null
+    approved: boolean | null
+    submittedAt: string | null
+  } | null
+  questions: StudentAssessmentQuestion[]
+}
+
+export interface StudentModuleAssessmentData {
+  availability: 'not_created' | 'blocked_incomplete_lessons' | 'available'
+  message: string
+  assessments: StudentAssessmentItem[]
+  progress: ModuleDetailProgress
+}
+
+export type StudentModuleAssessmentResponse = ApiResponse<StudentModuleAssessmentData | null>
+
+export interface StudentAssessmentSubmissionInput {
+  answers: Record<string, string | string[]>
+}
+
+export interface StudentAssessmentSubmissionData {
+  attempt: {
+    id: string
+    assessmentId: string
+    attemptNumber: number
+    status: AssessmentAttemptStatus
+    score: number | null
+    approved: boolean | null
+    submittedAt: string | null
+  }
+}
+
+export type StudentAssessmentSubmissionResponse = ApiResponse<StudentAssessmentSubmissionData | null>
+
+export interface AdminAssessmentSettingsInput {
+  maxAttemptsPerAssessment: number
+}
+
+export type AdminAssessmentSettingsResponse = ApiResponse<AssessmentPlatformSettings | null>
+
+export interface AdminAssessmentAttemptViewItem {
+  id: string
+  userId: string
+  studentName: string
+  studentEmail: string
+  courseId: string
+  courseTitle: string
+  moduleId: string
+  moduleTitle: string
+  assessmentId: string
+  assessmentTitle: string
+  assessmentQuestionType: AssessmentQuestionType
+  passingScore: number
+  attemptNumber: number
+  status: AssessmentAttemptStatus
+  score: number | null
+  approved: boolean | null
+  submittedAt: string | null
+  gradedAt: string | null
+  answers: AssessmentAttempt['answers']
+}
+
+export type AdminAssessmentAttemptsResponse = ApiResponse<AdminAssessmentAttemptViewItem[]>
+export type AdminAssessmentAttemptResponse = ApiResponse<AdminAssessmentAttemptViewItem | null>
+
+export interface AdminAssessmentAttemptScoreInput {
+  score: number
+}

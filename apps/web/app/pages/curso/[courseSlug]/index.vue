@@ -91,22 +91,28 @@ useSeoMeta({
 <template>
   <div class="section-stack">
     <SurfaceCard>
-      <div class="section-stack">
-        <span class="pill w-fit">Curso</span>
-        <h1 class="display-title">{{ course?.title || courseSlug }}</h1>
-        <p v-if="coursePending" class="body-copy">Carregando detalhes do curso...</p>
-        <p v-else-if="courseErrorMessage" class="body-copy">{{ courseErrorMessage }}</p>
-        <p v-else class="body-copy">
-          {{ course?.description || 'Esta tela concentra informacoes do curso, progresso percentual, certificado e modulos disponiveis.' }}
-        </p>
+      <div
+        class="section-stack course-hero"
+        :style="course?.coverImageUrl ? { backgroundImage: `linear-gradient(180deg, rgba(8, 8, 8, 0.18), rgba(8, 8, 8, 0.82)), url(${course.coverImageUrl})` } : undefined"
+        :data-has-cover="course?.coverImageUrl ? 'true' : 'false'"
+      >
+        <div class="section-stack course-hero-copy">
+          <span class="pill w-fit">Curso</span>
+          <h1 class="display-title">{{ course?.title || courseSlug }}</h1>
+          <p v-if="coursePending" class="body-copy">Carregando detalhes do curso...</p>
+          <p v-else-if="courseErrorMessage" class="body-copy">{{ courseErrorMessage }}</p>
+          <p v-else class="body-copy">
+            {{ course?.description || 'Esta tela concentra informacoes do curso, progresso percentual, certificado e modulos disponiveis.' }}
+          </p>
 
-        <div v-if="!coursePending && !courseErrorMessage" class="course-actions">
-          <UiButton :to="startCourseHref || undefined" :disabled="!startCourseHref" size="lg">
-            Iniciar curso
-          </UiButton>
-          <UiButton v-if="continueWatchingHref" :to="continueWatchingHref" variant="secondary" size="lg">
-            Continuar assistindo
-          </UiButton>
+          <div v-if="!coursePending && !courseErrorMessage" class="course-actions">
+            <UiButton :to="startCourseHref || undefined" :disabled="!startCourseHref" size="lg">
+              Iniciar curso
+            </UiButton>
+            <UiButton v-if="continueWatchingHref" :to="continueWatchingHref" variant="secondary" size="lg">
+              Continuar assistindo
+            </UiButton>
+          </div>
         </div>
       </div>
     </SurfaceCard>
@@ -135,6 +141,43 @@ useSeoMeta({
 </template>
 
 <style scoped>
+.course-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 24rem;
+  padding: clamp(1.4rem, 3vw, 2.25rem);
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(135deg, rgba(229, 9, 20, 0.16), transparent 46%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(10, 10, 10, 0.95), rgba(10, 10, 10, 0.82));
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.course-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 8, 8, 0.1), rgba(8, 8, 8, 0.78)),
+    linear-gradient(90deg, rgba(8, 8, 8, 0.78), rgba(8, 8, 8, 0.2));
+  pointer-events: none;
+}
+
+.course-hero[data-has-cover='false']::before {
+  background:
+    linear-gradient(180deg, rgba(8, 8, 8, 0.28), rgba(8, 8, 8, 0.82)),
+    linear-gradient(90deg, rgba(8, 8, 8, 0.78), rgba(8, 8, 8, 0.34));
+}
+
+.course-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 52rem;
+}
+
 .course-actions {
   display: flex;
   flex-wrap: wrap;
@@ -183,6 +226,12 @@ useSeoMeta({
 @media (min-width: 1080px) {
   .modules-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .course-hero {
+    min-height: 21rem;
   }
 }
 </style>

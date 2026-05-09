@@ -40,6 +40,7 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiButton`: CTA primario, secundario, ghost e success.
 - `UiField`: wrapper oficial para label, hint e erro.
 - `UiInput`: input padrao.
+- `UiCheckbox`: checkbox padrao para selecoes booleanas e listas de alternativas.
 - `UiSelect`: select padrao.
 - `UiTextarea`: textarea padrao.
 - `UiSpinner`: indicador de carregamento reutilizavel para estados async.
@@ -69,7 +70,21 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Toda acao principal deve usar `UiButton` com `variant="primary"`.
 - Toda acao secundaria deve usar `UiButton` com `variant="secondary"` ou `ghost`.
 - Toda acao positiva de confirmacao ou sucesso pode usar `UiButton` com `variant="success"` quando o verde comunicar melhor que o vermelho.
+- Quando a cor do texto do botao precisar fugir da cor padrao da `variant`, use `UiButton` com `textColor`.
+- `textColor` aceita todos os tokens oficiais de cor do sistema:
+  - `bg`
+  - `bg-elevated`
+  - `surface`
+  - `surface-strong`
+  - `border`
+  - `text`
+  - `muted`
+  - `accent`
+  - `accent-strong`
+  - `success`
+  - `danger`
 - Todo campo de formulario deve usar `UiField` + `UiInput`, `UiSelect` ou `UiTextarea`.
+- Checkboxes reutilizaveis devem preferir `UiCheckbox` em vez de `input type="checkbox"` cru.
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.
 - Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.
@@ -112,9 +127,19 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 ## Grid de cursos
 
 - `CourseGrid` e o padrao oficial para vitrines de cursos em formato de cards.
-- Cada card deve exibir capa, titulo, descricao curta, slug e meta resumida do curso.
+- Cada card deve exibir capa, titulo, descricao curta e meta resumida do curso.
 - O hover da capa deve ampliar somente a imagem interna, sem aumentar o tamanho externo do card.
 - Quando `coverImageUrl` estiver ausente, usar o fallback `app/assets/img/logos/videira-logo.svg`.
+
+## Destaques da home
+
+- `FeaturedBanner` e a primitiva visual para blocos de destaque editoriais.
+- `HomeHighlightsCarousel` concentra a logica de consumo do endpoint da home e o comportamento de carrossel.
+- Quando existir apenas um destaque ativo, a home deve mostrar um banner unico sem controles.
+- Quando existir mais de um destaque ativo, a home deve mostrar um carrossel com navegacao entre os destaques.
+- Cada destaque pode exibir titulo, descricao, lista de botoes de acao e uma unica midia opcional.
+- A midia opcional pode ser imagem ou video.
+- Videos em destaque devem aceitar link direto, YouTube ou Vimeo.
 
 ## Player de aula
 

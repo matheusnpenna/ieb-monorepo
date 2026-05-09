@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ModuleDetailResponse } from '@ieb/shared'
+import ModuleAssessmentPanel from '../../../../../components/content/ModuleAssessmentPanel.vue'
 import PageIntro from '../../../../../components/base/PageIntro.vue'
 import SurfaceCard from '../../../../../components/base/SurfaceCard.vue'
-import UiButton from '../../../../../components/ui/UiButton.vue'
 
 definePageMeta({
   layout: 'content'
@@ -40,7 +40,6 @@ const moduleDetail = computed(() => {
 
 const moduleData = computed(() => moduleDetail.value?.module || null)
 const progress = computed(() => moduleDetail.value?.progress || null)
-const assessment = computed(() => moduleDetail.value?.assessment || null)
 
 const lessons = computed(() => {
   if (!moduleDetail.value) {
@@ -55,8 +54,6 @@ const lessons = computed(() => {
     href: `/curso/${courseSlug.value}/modulo/${moduleSlug.value}/aula/${lesson.slug}`
   }))
 })
-
-const assessmentHref = computed(() => `/curso/${courseSlug.value}/modulo/${moduleSlug.value}/avaliacao`)
 
 const moduleErrorMessage = computed(() => {
   if (!moduleDetailResponse.value || moduleDetailResponse.value.status !== 'error') {
@@ -139,23 +136,11 @@ useSeoMeta({
       <p class="body-copy">Nenhuma aula disponivel para este modulo no momento.</p>
     </SurfaceCard>
 
-    <SurfaceCard v-if="!modulePending && !moduleErrorMessage">
-      <div class="section-stack">
-        <h2 class="section-title">Avaliacao do modulo</h2>
-        <p class="body-copy">
-          {{
-            assessment
-              ? assessment.description
-              : 'Este modulo ainda nao possui avaliacao publicada.'
-          }}
-        </p>
-        <p v-if="assessment" class="assessment-meta">
-          Nota minima: {{ assessment.passingScore }}% · Tempo limite:
-          {{ assessment.timeLimitInMinutes ? `${assessment.timeLimitInMinutes} min` : 'sem limite' }}
-        </p>
-        <UiButton v-if="assessment" :to="assessmentHref" variant="secondary" size="lg">Ir para avaliacao</UiButton>
-      </div>
-    </SurfaceCard>
+    <ModuleAssessmentPanel
+      v-if="!modulePending && !moduleErrorMessage"
+      :course-slug="courseSlug"
+      :module-slug="moduleSlug"
+    />
   </div>
 </template>
 

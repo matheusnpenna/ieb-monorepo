@@ -86,6 +86,17 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
   - sucesso: `{ status: 'success', message?: string, data: T }`
   - erro: `{ status: 'error', messages: string[], data: T }`
 - Em respostas de erro, manter tambem o status HTTP correto e preencher `messages` com a mensagem retornada ao cliente.
+- Sempre que um endpoint ou fluxo de backend cair em tratamento de erro, registrar log por padrao.
+- Em handlers com `try/catch`, o bloco `catch` deve, sempre que houver contexto suficiente, registrar a falha em log antes de responder ao cliente.
+- O log de erro deve incluir, sempre que possivel:
+  - usuario responsavel pela acao
+  - entidade ou colecao afetada
+  - identificador do alvo
+  - status do erro
+  - mensagem do erro
+  - metadados uteis para diagnostico
+- O registro do log de erro nao deve sobrescrever o erro principal do fluxo.
+- Se o proprio log falhar, preservar a resposta original do endpoint e nao mascarar a falha inicial.
 - Endpoints de autenticacao sao excecao e podem manter o contrato proprio ja adotado no projeto.
 
 ## Regra critica sobre h3

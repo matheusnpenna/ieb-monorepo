@@ -93,6 +93,7 @@ const onRequestLogout = () => {
   grid-template-columns: 260px minmax(0, 1fr);
   gap: 1.25rem;
   padding: 1rem 0 2rem;
+  width: 90% !important;
 }
 
 .sidebar {

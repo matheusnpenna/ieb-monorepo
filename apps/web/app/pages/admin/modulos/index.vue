@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import PageIntro from '../../../components/base/PageIntro.vue'
-import SurfaceCard from '../../../components/base/SurfaceCard.vue'
+import AdminModulesListView from '../../../components/admin/AdminModulesListView.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -12,11 +11,5 @@ useSeoMeta({
 </script>
 
 <template>
-  <SurfaceCard>
-    <PageIntro
-      eyebrow="Modulos"
-      title="Gestao de modulos"
-      description="Area reservada para criacao, ordenacao e vinculacao de modulos aos cursos."
-    />
-  </SurfaceCard>
+  <AdminModulesListView />
 </template>
