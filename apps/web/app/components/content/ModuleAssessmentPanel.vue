@@ -76,7 +76,7 @@ const assessmentHubHref = computed(() => `/curso/${props.courseSlug}/modulo/${pr
             </li>
           </ul>
 
-          <UiButton :to="assessmentHubHref" variant="secondary" size="lg">Ir para avaliacoes</UiButton>
+          <UiButton :to="assessmentHubHref" variant="secondary" size="lg">Responder avaliação</UiButton>
         </div>
       </template>
     </div>
