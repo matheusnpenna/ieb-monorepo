@@ -22,6 +22,9 @@ O objetivo principal e reduzir retrabalho, evitar regressões de stack e manter 
 
 ## Regras operacionais
 
+- Toda implementacao deve comecar com um plano apresentado ao usuario.
+- O plano precisa ser aprovado explicitamente pelo usuario antes de qualquer alteracao em arquivos do repositorio.
+- Enquanto o plano nao for aprovado, o agente pode apenas investigar, ler arquivos e executar comandos nao mutantes para entender o contexto.
 - Sempre iniciar o trabalho assumindo `Node 20`.
 - Preferir comandos via workspace:
   - `pnpm --filter @ieb/web dev`
