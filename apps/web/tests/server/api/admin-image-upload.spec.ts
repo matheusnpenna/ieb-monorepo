@@ -30,6 +30,17 @@ vi.mock('../../../server/utils/admin-assets', () => ({
   uploadAdminCourseImage
 }))
 
+vi.mock('../../../server/modules/assets/assets.module', () => ({
+  getAssetsModule: () => ({
+    adminLog: {
+      write: writeAdminLog
+    },
+    service: {
+      uploadAdminImage: uploadAdminCourseImage
+    }
+  })
+}))
+
 import uploadImageHandler from '../../../server/api/admin/uploads/images/index.post'
 
 const sampleSession = {

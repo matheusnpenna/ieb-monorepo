@@ -1,10 +1,4 @@
-import type { AuthSessionResponse } from '@ieb/shared'
+import { defineEventHandler } from 'h3'
+import { handleSession } from '../../modules/auth/interfaces/http/controller'
 
-export default defineEventHandler(async (event): Promise<AuthSessionResponse> => {
-  const session = (event.context as { authSession?: { user: AuthSessionResponse['user'] } }).authSession
-
-  return {
-    authenticated: Boolean(session?.user),
-    user: session?.user || null
-  }
-})
+export default defineEventHandler(handleSession)

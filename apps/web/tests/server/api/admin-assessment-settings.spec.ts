@@ -38,6 +38,18 @@ vi.mock('../../../server/utils/assessment-settings', () => ({
   updateAdminAssessmentPlatformSettings
 }))
 
+vi.mock('../../../server/modules/assessment-settings/assessment-settings.module', () => ({
+  getAssessmentSettingsModule: () => ({
+    adminLog: {
+      write: writeAdminLog
+    },
+    service: {
+      getAdminAssessmentPlatformSettings,
+      updateAdminAssessmentPlatformSettings
+    }
+  })
+}))
+
 import getSettingsHandler from '../../../server/api/admin/assessments/settings/index.get'
 import updateSettingsHandler from '../../../server/api/admin/assessments/settings/index.patch'
 

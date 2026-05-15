@@ -47,6 +47,21 @@ vi.mock('../../../server/utils/users', () => ({
   deleteAdminUserById
 }))
 
+vi.mock('../../../server/modules/users/users.module', () => ({
+  getUsersModule: () => ({
+    adminLog: {
+      write: writeAdminLog
+    },
+    usersService: {
+      listAdminUsersForManagement,
+      createAdminUser,
+      getAdminUserById,
+      updateAdminUserById,
+      deleteAdminUserById
+    }
+  })
+}))
+
 import listUsersHandler from '../../../server/api/admin/users/index.get'
 import createUserHandler from '../../../server/api/admin/users/index.post'
 import getUserHandler from '../../../server/api/admin/users/[userId]/index.get'

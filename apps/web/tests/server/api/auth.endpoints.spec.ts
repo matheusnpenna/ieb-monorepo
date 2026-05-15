@@ -7,8 +7,10 @@ const {
   readBody,
   loginWithEmailAndPassword,
   writeAdminLog,
+  setAuthSessionCookie,
   clearAuthSessionCookie,
   requireAuthSession,
+  resolveAuthSession,
   sendPasswordRecoveryEmail,
   registerAccount,
   getRegistrationStatus,
@@ -18,8 +20,10 @@ const {
   readBody: vi.fn(),
   loginWithEmailAndPassword: vi.fn(),
   writeAdminLog: vi.fn(),
+  setAuthSessionCookie: vi.fn(),
   clearAuthSessionCookie: vi.fn(),
   requireAuthSession: vi.fn(),
+  resolveAuthSession: vi.fn(),
   sendPasswordRecoveryEmail: vi.fn(),
   registerAccount: vi.fn(),
   getRegistrationStatus: vi.fn(),
@@ -51,9 +55,46 @@ vi.mock('../../../server/utils/auth', () => ({
   getRegistrationStatus
 }))
 
+vi.mock('../../../server/modules/auth/auth.module', () => ({
+  getAuthModule: () => ({
+    accountService: {
+      loginWithEmailAndPassword,
+      registerAccount,
+      sendPasswordRecoveryEmail
+    },
+    adminLogService: {
+      write: writeAdminLog
+    },
+    registrationStatusService: {
+      getRegistrationStatus
+    },
+    sessionService: {
+      resolveAuthSession
+    }
+  })
+}))
+
+vi.mock('../../../server/modules/auth/interfaces/http/cookies', () => ({
+  setAuthSessionCookieForEvent: setAuthSessionCookie,
+  clearAuthSessionCookieForEvent: clearAuthSessionCookie,
+  getAuthSessionCookieFromEvent: vi.fn(() => 'session-cookie')
+}))
+
 vi.mock('../../../server/utils/enrollments', () => ({
   listAdminUserEnrollments,
   updateAdminUserEnrollments
+}))
+
+vi.mock('../../../server/modules/users/users.module', () => ({
+  getUsersModule: () => ({
+    adminLog: {
+      write: writeAdminLog
+    },
+    userEnrollmentsService: {
+      listAdminUserEnrollments,
+      updateAdminUserEnrollments
+    }
+  })
 }))
 
 import loginHandler from '../../../server/api/auth/login.post'
@@ -99,15 +140,19 @@ describe('server auth endpoints', () => {
         email: 'jane@example.com',
         password: 'super-secret'
       })
-      loginWithEmailAndPassword.mockResolvedValue(sampleUser)
+      loginWithEmailAndPassword.mockResolvedValue({
+        user: sampleUser,
+        idToken: 'id-token'
+      })
       writeAdminLog.mockResolvedValue(undefined)
 
       const response = await loginHandler(event)
 
-      expect(loginWithEmailAndPassword).toHaveBeenCalledWith(event, {
+      expect(loginWithEmailAndPassword).toHaveBeenCalledWith({
         email: 'jane@example.com',
         password: 'super-secret'
       })
+      expect(setAuthSessionCookie).toHaveBeenCalledWith(event, 'id-token')
       expect(writeAdminLog).toHaveBeenCalledWith(
         {
           user: sampleUser,
@@ -123,12 +168,15 @@ describe('server auth endpoints', () => {
       const event = {} as never
 
       readBody.mockResolvedValue(undefined)
-      loginWithEmailAndPassword.mockResolvedValue(sampleUser)
+      loginWithEmailAndPassword.mockResolvedValue({
+        user: sampleUser,
+        idToken: 'id-token'
+      })
       writeAdminLog.mockResolvedValue(undefined)
 
       await loginHandler(event)
 
-      expect(loginWithEmailAndPassword).toHaveBeenCalledWith(event, {
+      expect(loginWithEmailAndPassword).toHaveBeenCalledWith({
         email: '',
         password: ''
       })
@@ -143,12 +191,12 @@ describe('server auth endpoints', () => {
         issuedAt: '2026-05-05T00:00:00.000Z'
       }
 
-      requireAuthSession.mockResolvedValue(session)
+      resolveAuthSession.mockResolvedValue(session)
       writeAdminLog.mockResolvedValue(undefined)
 
       const response = await logoutHandler(event)
 
-      expect(requireAuthSession).toHaveBeenCalledWith(event)
+      expect(resolveAuthSession).toHaveBeenCalledWith('session-cookie')
       expect(writeAdminLog).toHaveBeenCalledWith(
         session,
         'logout',
@@ -161,7 +209,7 @@ describe('server auth endpoints', () => {
     it('still clears the cookie when there is no authenticated session', async () => {
       const event = {} as never
 
-      requireAuthSession.mockRejectedValue(new Error('Unauthenticated'))
+      resolveAuthSession.mockResolvedValue(null)
 
       const response = await logoutHandler(event)
 
@@ -212,11 +260,14 @@ describe('server auth endpoints', () => {
         password: 'super-secret',
         region: 'sertao'
       })
-      registerAccount.mockResolvedValue(sampleUser)
+      registerAccount.mockResolvedValue({
+        user: sampleUser,
+        idToken: 'id-token'
+      })
 
       const response = await registerHandler(event)
 
-      expect(registerAccount).toHaveBeenCalledWith(event, {
+      expect(registerAccount).toHaveBeenCalledWith({
         fullName: 'Jane Doe',
         cpf: '12345678900',
         email: 'jane@example.com',
@@ -224,6 +275,7 @@ describe('server auth endpoints', () => {
         password: 'super-secret',
         region: 'sertao'
       })
+      expect(setAuthSessionCookie).toHaveBeenCalledWith(event, 'id-token')
       expect(response).toEqual({ user: sampleUser })
     })
 
@@ -231,11 +283,14 @@ describe('server auth endpoints', () => {
       const event = {} as never
 
       readBody.mockResolvedValue(undefined)
-      registerAccount.mockResolvedValue(sampleUser)
+      registerAccount.mockResolvedValue({
+        user: sampleUser,
+        idToken: 'id-token'
+      })
 
       await registerHandler(event)
 
-      expect(registerAccount).toHaveBeenCalledWith(event, {
+      expect(registerAccount).toHaveBeenCalledWith({
         fullName: '',
         cpf: '',
         email: '',
