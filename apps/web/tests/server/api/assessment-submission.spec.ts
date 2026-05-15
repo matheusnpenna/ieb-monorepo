@@ -1,9 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requireAuthSession, writeAdminLog, submitAssessmentAttemptBySlugs, readBody } = vi.hoisted(() => ({
+const {
+  requireAuthSession,
+  writeAdminLog,
+  getAccessibleModuleAssessmentsBySlugs,
+  submitAssessmentAttemptBySlugs,
+  listAdminAssessmentAttemptsForManagement,
+  updateAdminAssessmentAttemptScoreById,
+  deleteAdminAssessmentAttemptById,
+  listAdminAssessmentsForManagement,
+  createAdminAssessment,
+  getAdminAssessmentBySlug,
+  updateAdminAssessmentBySlug,
+  deleteAdminAssessmentBySlug,
+  readBody
+} = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
   writeAdminLog: vi.fn(),
+  getAccessibleModuleAssessmentsBySlugs: vi.fn(),
   submitAssessmentAttemptBySlugs: vi.fn(),
+  listAdminAssessmentAttemptsForManagement: vi.fn(),
+  updateAdminAssessmentAttemptScoreById: vi.fn(),
+  deleteAdminAssessmentAttemptById: vi.fn(),
+  listAdminAssessmentsForManagement: vi.fn(),
+  createAdminAssessment: vi.fn(),
+  getAdminAssessmentBySlug: vi.fn(),
+  updateAdminAssessmentBySlug: vi.fn(),
+  deleteAdminAssessmentBySlug: vi.fn(),
   readBody: vi.fn()
 }))
 
@@ -27,7 +50,16 @@ vi.mock('../../../server/utils/auth', () => ({
 }))
 
 vi.mock('../../../server/utils/courses', () => ({
-  submitAssessmentAttemptBySlugs
+  getAccessibleModuleAssessmentsBySlugs,
+  submitAssessmentAttemptBySlugs,
+  listAdminAssessmentAttemptsForManagement,
+  updateAdminAssessmentAttemptScoreById,
+  deleteAdminAssessmentAttemptById,
+  listAdminAssessmentsForManagement,
+  createAdminAssessment,
+  getAdminAssessmentBySlug,
+  updateAdminAssessmentBySlug,
+  deleteAdminAssessmentBySlug
 }))
 
 import submitAssessmentHandler from '../../../server/api/courses/[courseSlug]/modules/[moduleSlug]/assessments/[assessmentSlug]/attempts/index.post'

@@ -2,17 +2,33 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   requireAuthSession,
+  getAccessibleLessonDetailBySlugs,
+  updateLessonProgressBySlugs,
+  markLessonAsCompletedBySlugs,
   listLessonCommentsBySlugs,
   createLessonCommentBySlugs,
   updateLessonCommentBySlugs,
   deleteLessonCommentBySlugs,
+  listAdminLessonsForManagement,
+  createAdminLesson,
+  getAdminLessonBySlug,
+  updateAdminLessonBySlug,
+  deleteAdminLessonBySlug,
   readBody
 } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
+  getAccessibleLessonDetailBySlugs: vi.fn(),
+  updateLessonProgressBySlugs: vi.fn(),
+  markLessonAsCompletedBySlugs: vi.fn(),
   listLessonCommentsBySlugs: vi.fn(),
   createLessonCommentBySlugs: vi.fn(),
   updateLessonCommentBySlugs: vi.fn(),
   deleteLessonCommentBySlugs: vi.fn(),
+  listAdminLessonsForManagement: vi.fn(),
+  createAdminLesson: vi.fn(),
+  getAdminLessonBySlug: vi.fn(),
+  updateAdminLessonBySlug: vi.fn(),
+  deleteAdminLessonBySlug: vi.fn(),
   readBody: vi.fn()
 }))
 
@@ -35,10 +51,18 @@ vi.mock('../../../server/utils/auth', () => ({
 }))
 
 vi.mock('../../../server/utils/courses', () => ({
+  getAccessibleLessonDetailBySlugs,
+  updateLessonProgressBySlugs,
+  markLessonAsCompletedBySlugs,
   listLessonCommentsBySlugs,
   createLessonCommentBySlugs,
   updateLessonCommentBySlugs,
-  deleteLessonCommentBySlugs
+  deleteLessonCommentBySlugs,
+  listAdminLessonsForManagement,
+  createAdminLesson,
+  getAdminLessonBySlug,
+  updateAdminLessonBySlug,
+  deleteAdminLessonBySlug
 }))
 
 import listCommentsHandler from '../../../server/api/courses/[courseSlug]/modules/[moduleSlug]/lessons/[lessonSlug]/comments/index.get'

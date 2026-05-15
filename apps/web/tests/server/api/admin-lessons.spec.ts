@@ -3,6 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   requireAuthSession,
   writeAdminLog,
+  getAccessibleLessonDetailBySlugs,
+  updateLessonProgressBySlugs,
+  markLessonAsCompletedBySlugs,
+  listLessonCommentsBySlugs,
+  createLessonCommentBySlugs,
+  updateLessonCommentBySlugs,
+  deleteLessonCommentBySlugs,
   listAdminLessonsForManagement,
   createAdminLesson,
   getAdminLessonBySlug,
@@ -12,6 +19,13 @@ const {
 } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
   writeAdminLog: vi.fn(),
+  getAccessibleLessonDetailBySlugs: vi.fn(),
+  updateLessonProgressBySlugs: vi.fn(),
+  markLessonAsCompletedBySlugs: vi.fn(),
+  listLessonCommentsBySlugs: vi.fn(),
+  createLessonCommentBySlugs: vi.fn(),
+  updateLessonCommentBySlugs: vi.fn(),
+  deleteLessonCommentBySlugs: vi.fn(),
   listAdminLessonsForManagement: vi.fn(),
   createAdminLesson: vi.fn(),
   getAdminLessonBySlug: vi.fn(),
@@ -40,6 +54,13 @@ vi.mock('../../../server/utils/auth', () => ({
 }))
 
 vi.mock('../../../server/utils/courses', () => ({
+  getAccessibleLessonDetailBySlugs,
+  updateLessonProgressBySlugs,
+  markLessonAsCompletedBySlugs,
+  listLessonCommentsBySlugs,
+  createLessonCommentBySlugs,
+  updateLessonCommentBySlugs,
+  deleteLessonCommentBySlugs,
   listAdminLessonsForManagement,
   createAdminLesson,
   getAdminLessonBySlug,

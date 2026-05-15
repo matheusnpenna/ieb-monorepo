@@ -1,8 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requireAuthSession, getAccessibleModuleDetailBySlugs } = vi.hoisted(() => ({
+const {
+  requireAuthSession,
+  getAccessibleModuleDetailBySlugs,
+  listAdminModulesForManagement,
+  createAdminModule,
+  getAdminModuleBySlug,
+  updateAdminModuleBySlug,
+  deleteAdminModuleBySlug
+} = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
-  getAccessibleModuleDetailBySlugs: vi.fn()
+  getAccessibleModuleDetailBySlugs: vi.fn(),
+  listAdminModulesForManagement: vi.fn(),
+  createAdminModule: vi.fn(),
+  getAdminModuleBySlug: vi.fn(),
+  updateAdminModuleBySlug: vi.fn(),
+  deleteAdminModuleBySlug: vi.fn()
 }))
 
 vi.hoisted(() => {
@@ -15,7 +28,12 @@ vi.mock('../../../server/utils/auth', () => ({
 }))
 
 vi.mock('../../../server/utils/courses', () => ({
-  getAccessibleModuleDetailBySlugs
+  getAccessibleModuleDetailBySlugs,
+  listAdminModulesForManagement,
+  createAdminModule,
+  getAdminModuleBySlug,
+  updateAdminModuleBySlug,
+  deleteAdminModuleBySlug
 }))
 
 import moduleDetailHandler from '../../../server/api/courses/[courseSlug]/modules/[moduleSlug]/index.get'

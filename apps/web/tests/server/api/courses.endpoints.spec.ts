@@ -1,8 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requireAuthSession, listAccessibleCourses } = vi.hoisted(() => ({
+const {
+  requireAuthSession,
+  listAccessibleCourses,
+  getAccessibleCourseDetailBySlug,
+  getHomeMetrics,
+  listAdminCoursesForManagement,
+  createAdminCourse,
+  getAdminCourseBySlug,
+  updateAdminCourseBySlug,
+  deleteAdminCourseBySlug
+} = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
-  listAccessibleCourses: vi.fn()
+  listAccessibleCourses: vi.fn(),
+  getAccessibleCourseDetailBySlug: vi.fn(),
+  getHomeMetrics: vi.fn(),
+  listAdminCoursesForManagement: vi.fn(),
+  createAdminCourse: vi.fn(),
+  getAdminCourseBySlug: vi.fn(),
+  updateAdminCourseBySlug: vi.fn(),
+  deleteAdminCourseBySlug: vi.fn()
 }))
 
 vi.hoisted(() => {
@@ -15,7 +32,14 @@ vi.mock('../../../server/utils/auth', () => ({
 }))
 
 vi.mock('../../../server/utils/courses', () => ({
-  listAccessibleCourses
+  listAccessibleCourses,
+  getAccessibleCourseDetailBySlug,
+  getHomeMetrics,
+  listAdminCoursesForManagement,
+  createAdminCourse,
+  getAdminCourseBySlug,
+  updateAdminCourseBySlug,
+  deleteAdminCourseBySlug
 }))
 
 import coursesHandler from '../../../server/api/courses/index.get'

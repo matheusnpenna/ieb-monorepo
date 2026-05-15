@@ -1,40 +1,4 @@
-import type { LessonDetailResponse } from '@ieb/shared'
-import { setResponseStatus } from 'h3'
-import { requireAuthSession } from '../../../../../../../utils/auth'
-import { getAccessibleLessonDetailBySlugs } from '../../../../../../../utils/courses'
+import { defineEventHandler } from 'h3'
+import { handleGetAccessibleLessonDetail } from '../../../../../../../modules/lessons/interfaces/http/controller'
 
-export default defineEventHandler(async (event): Promise<LessonDetailResponse> => {
-  try {
-    const session = await requireAuthSession(event)
-    const courseSlug = String(event.context.params?.courseSlug ?? '')
-    const moduleSlug = String(event.context.params?.moduleSlug ?? '')
-    const lessonSlug = String(event.context.params?.lessonSlug ?? '')
-    const lessonDetail = await getAccessibleLessonDetailBySlugs(session, courseSlug, moduleSlug, lessonSlug)
-
-    return {
-      status: 'success',
-      data: lessonDetail
-    }
-  } catch (error) {
-    const statusCode =
-      typeof error === 'object' && error !== null && 'statusCode' in error && typeof error.statusCode === 'number'
-        ? error.statusCode
-        : 500
-    const statusMessage =
-      typeof error === 'object' &&
-      error !== null &&
-      'statusMessage' in error &&
-      typeof error.statusMessage === 'string' &&
-      error.statusMessage
-        ? error.statusMessage
-        : 'Nao foi possivel carregar a aula.'
-
-    setResponseStatus(event, statusCode)
-
-    return {
-      status: 'error',
-      messages: [statusMessage],
-      data: null
-    }
-  }
-})
+export default defineEventHandler(handleGetAccessibleLessonDetail)

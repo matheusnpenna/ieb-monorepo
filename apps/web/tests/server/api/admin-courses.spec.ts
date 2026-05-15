@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   requireAuthSession,
+  listAccessibleCourses,
+  getAccessibleCourseDetailBySlug,
+  getHomeMetrics,
   listAdminCoursesForManagement,
   createAdminCourse,
   getAdminCourseBySlug,
@@ -10,6 +13,9 @@ const {
   readBody
 } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
+  listAccessibleCourses: vi.fn(),
+  getAccessibleCourseDetailBySlug: vi.fn(),
+  getHomeMetrics: vi.fn(),
   listAdminCoursesForManagement: vi.fn(),
   createAdminCourse: vi.fn(),
   getAdminCourseBySlug: vi.fn(),
@@ -37,6 +43,9 @@ vi.mock('../../../server/utils/auth', () => ({
 }))
 
 vi.mock('../../../server/utils/courses', () => ({
+  listAccessibleCourses,
+  getAccessibleCourseDetailBySlug,
+  getHomeMetrics,
   listAdminCoursesForManagement,
   createAdminCourse,
   getAdminCourseBySlug,

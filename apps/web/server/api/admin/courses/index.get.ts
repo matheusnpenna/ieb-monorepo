@@ -1,37 +1,4 @@
-import type { AdminCoursesResponse } from '@ieb/shared'
-import { defineEventHandler, setResponseStatus } from 'h3'
-import { requireAuthSession } from '../../../utils/auth'
-import { listAdminCoursesForManagement } from '../../../utils/courses'
+import { defineEventHandler } from 'h3'
+import { handleListAdminCourses } from '../../../modules/courses/interfaces/http/controller'
 
-export default defineEventHandler(async (event): Promise<AdminCoursesResponse> => {
-  try {
-    const session = await requireAuthSession(event, { admin: true })
-    const courses = await listAdminCoursesForManagement(session)
-
-    return {
-      status: 'success',
-      data: courses
-    }
-  } catch (error) {
-    const statusCode =
-      typeof error === 'object' && error !== null && 'statusCode' in error && typeof error.statusCode === 'number'
-        ? error.statusCode
-        : 500
-    const statusMessage =
-      typeof error === 'object' &&
-      error !== null &&
-      'statusMessage' in error &&
-      typeof error.statusMessage === 'string' &&
-      error.statusMessage
-        ? error.statusMessage
-        : 'Nao foi possivel carregar os cursos do painel.'
-
-    setResponseStatus(event, statusCode)
-
-    return {
-      status: 'error',
-      messages: [statusMessage],
-      data: []
-    }
-  }
-})
+export default defineEventHandler(handleListAdminCourses)
