@@ -49,7 +49,7 @@ vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   writeAdminLog
 }))
 
-vi.mock('../../../server/modules/shared/infrastructure/course-catalog', () => ({
+vi.mock('../../../server/modules/assessments/infrastructure/firebase-assessments.repository', () => ({
   getAccessibleModuleAssessmentsBySlugs,
   submitAssessmentAttemptBySlugs,
   listAdminAssessmentAttemptsForManagement,

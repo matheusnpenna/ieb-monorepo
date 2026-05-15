@@ -34,7 +34,7 @@ Cada `*.module.ts` funciona como composition root do modulo, inspirado nos modul
 ## Caminho incremental
 
 1. Implementar primeiro o modulo `highlights` como referencia arquitetural.
-2. Manter `server/utils/highlights.ts` como facade temporaria para compatibilidade com testes e chamadas antigas.
+2. Manter facades temporarias apenas enquanto houver consumidores legados.
 3. Migrar endpoints de highlights para controllers do novo modulo.
 4. Revisar a implementacao do modulo `highlights` antes de migrar qualquer outro dominio.
 5. Depois da aprovacao, repetir o padrao em `logs`, `classrooms`, `assessment-settings`, `assets`, `users` e, por ultimo, dividir `courses.ts`.
@@ -48,16 +48,22 @@ Atualizado em 2026-05-15.
 - Modulos implementados para as areas ja migradas: `auth`, `users`, `assets`, `assessment-settings`, `highlights`, `logs`, `classrooms`, `courses`, `course-modules`, `lessons` e `assessments`.
 - A fatia de `courses.ts` foi separada na camada de endpoints em quatro modulos: `courses`, `course-modules`, `lessons` e `assessments`.
 - `apps/web/server/modules`: sem imports diretos de `server/utils/*`.
-- `server/utils/auth.ts`, `server/utils/firebase-admin.ts` e `server/utils/courses.ts` permanecem apenas como facades temporarias de compatibilidade.
+- Nao ha consumidores ativos de facades temporarias em `server/utils` ou `server/[DELETAR]-utils`.
 - Os adapters legados de cursos foram substituidos por adapters Firebase nos modulos `courses`, `course-modules`, `lessons` e `assessments`.
-- A implementacao compartilhada que ainda concentra comportamento de catalogo, progresso e avaliacoes fica em `modules/shared/infrastructure/course-catalog.ts`; ela deve ser quebrada em repositories/use cases menores nas proximas fatias.
+- As fatias `courses`, `course-modules`, `lessons` e `assessments` ja possuem implementacoes proprias em:
+  - `modules/courses/infrastructure/firebase-courses.repository.ts`
+  - `modules/course-modules/infrastructure/firebase-course-modules.repository.ts`
+  - `modules/lessons/infrastructure/firebase-lessons.repository.ts`
+  - `modules/assessments/infrastructure/firebase-assessments.repository.ts`
+- As validacoes/factories administrativas de `courses`, `course-modules`, `lessons` e `assessments` foram movidas para `domain`, incluindo regras de ordenacao basicas dos itens filhos.
+- As regras de progresso, disponibilidade de avaliacoes, normalizacao de respostas e correcao de tentativas foram movidas para `domain`.
+- `modules/shared/infrastructure/course-catalog.ts` foi removido apos a migracao dos consumidores para repositories/fatias proprias.
 
 ## Proxima etapa recomendada
 
-1. Quebrar `modules/shared/infrastructure/course-catalog.ts` por responsabilidade, criando repositories/projections proprios para `courses`, `course-modules`, `lessons` e `assessments`.
-2. Mover validacoes de payload e regras de negocio para `domain`/`application` desses quatro modulos.
-3. Remover as facades temporarias em `server/utils/*` quando nao houver testes ou chamadas antigas dependentes delas.
-4. Remover imports in-process entre dominios quando houver uma porta publica ou evento equivalente.
+1. Remover imports in-process entre dominios quando houver uma porta publica ou evento equivalente.
+2. Revisar se repositories que ainda montam projections de leitura podem ser divididos em query services menores.
+3. Adicionar testes unitarios de dominio para validacoes/factories extraidas quando o modulo estabilizar.
 
 ## Preparacao para microservicos
 

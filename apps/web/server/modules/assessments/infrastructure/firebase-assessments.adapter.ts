@@ -10,7 +10,7 @@ import {
   submitAssessmentAttemptBySlugs,
   updateAdminAssessmentBySlug,
   updateAdminAssessmentAttemptScoreById
-} from '../../shared/infrastructure/course-catalog'
+} from './firebase-assessments.repository'
 
 export class FirebaseAssessmentsAdapter implements AssessmentsBackendPort {
   listAdminAssessmentsForManagement = listAdminAssessmentsForManagement

@@ -12,7 +12,7 @@ import {
   updateAdminLessonBySlug,
   updateLessonCommentBySlugs,
   updateLessonProgressBySlugs
-} from '../../shared/infrastructure/course-catalog'
+} from './firebase-lessons.repository'
 
 export class FirebaseLessonsAdapter implements LessonsBackendPort {
   listAdminLessonsForManagement = listAdminLessonsForManagement

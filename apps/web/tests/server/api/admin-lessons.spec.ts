@@ -53,7 +53,7 @@ vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   writeAdminLog
 }))
 
-vi.mock('../../../server/modules/shared/infrastructure/course-catalog', () => ({
+vi.mock('../../../server/modules/lessons/infrastructure/firebase-lessons.repository', () => ({
   getAccessibleLessonDetailBySlugs,
   updateLessonProgressBySlugs,
   markLessonAsCompletedBySlugs,

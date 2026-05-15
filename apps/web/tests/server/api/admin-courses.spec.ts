@@ -42,7 +42,7 @@ vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   requireAuthSession
 }))
 
-vi.mock('../../../server/modules/shared/infrastructure/course-catalog', () => ({
+vi.mock('../../../server/modules/courses/infrastructure/firebase-courses.repository', () => ({
   listAccessibleCourses,
   getAccessibleCourseDetailBySlug,
   getHomeMetrics,

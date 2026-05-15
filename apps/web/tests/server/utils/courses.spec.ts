@@ -12,39 +12,45 @@ vi.mock('../../../server/modules/shared/infrastructure/firebase-admin', () => ({
 }))
 
 import {
-  createAdminAssessment,
   createAdminCourse,
-  createAdminLesson,
-  createAdminModule,
-  deleteAdminAssessmentBySlug,
   deleteAdminCourseBySlug,
-  deleteAdminLessonBySlug,
-  deleteAdminModuleBySlug,
-  getAccessibleModuleAssessmentsBySlugs,
   getAccessibleCourseDetailBySlug,
-  getAccessibleModuleDetailBySlugs,
-  getAccessibleLessonDetailBySlugs,
-  getAdminAssessmentBySlug,
   getAdminCourseBySlug,
-  getAdminLessonBySlug,
-  getAdminModuleBySlug,
   getHomeMetrics,
-  listAdminAssessmentsForManagement,
   listAccessibleCourses,
   listAdminCoursesForManagement,
-  listAdminLessonsForManagement,
+  updateAdminCourseBySlug
+} from '../../../server/modules/courses/infrastructure/firebase-courses.repository'
+import {
+  createAdminModule,
+  deleteAdminModuleBySlug,
+  getAccessibleModuleDetailBySlugs,
+  getAdminModuleBySlug,
   listAdminModulesForManagement,
+  updateAdminModuleBySlug
+} from '../../../server/modules/course-modules/infrastructure/firebase-course-modules.repository'
+import {
+  createAdminLesson,
+  deleteAdminLessonBySlug,
+  getAccessibleLessonDetailBySlugs,
+  getAdminLessonBySlug,
+  listAdminLessonsForManagement,
   listLessonCommentsBySlugs,
   markLessonAsCompletedBySlugs,
-  updateAdminAssessmentBySlug,
-  updateAdminCourseBySlug,
   updateAdminLessonBySlug,
-  updateAdminModuleBySlug,
   updateLessonProgressBySlugs,
   createLessonCommentBySlugs,
   updateLessonCommentBySlugs,
   deleteLessonCommentBySlugs
-} from '../../../server/modules/shared/infrastructure/course-catalog'
+} from '../../../server/modules/lessons/infrastructure/firebase-lessons.repository'
+import {
+  createAdminAssessment,
+  deleteAdminAssessmentBySlug,
+  getAccessibleModuleAssessmentsBySlugs,
+  getAdminAssessmentBySlug,
+  listAdminAssessmentsForManagement,
+  updateAdminAssessmentBySlug
+} from '../../../server/modules/assessments/infrastructure/firebase-assessments.repository'
 
 const buildCourse = (overrides: Partial<Course> & Pick<Course, 'id' | 'title' | 'slug'>): Course => ({
   id: overrides.id,

@@ -41,7 +41,7 @@ vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   writeAdminLog
 }))
 
-vi.mock('../../../server/modules/shared/infrastructure/course-catalog', () => ({
+vi.mock('../../../server/modules/course-modules/infrastructure/firebase-course-modules.repository', () => ({
   getAccessibleModuleDetailBySlugs,
   listAdminModulesForManagement,
   createAdminModule,

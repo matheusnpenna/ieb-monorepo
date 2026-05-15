@@ -8,7 +8,7 @@ import {
   listAccessibleCourses,
   listAdminCoursesForManagement,
   updateAdminCourseBySlug
-} from '../../shared/infrastructure/course-catalog'
+} from './firebase-courses.repository'
 
 export class FirebaseCoursesAdapter implements CoursesBackendPort {
   listAccessibleCourses = listAccessibleCourses
