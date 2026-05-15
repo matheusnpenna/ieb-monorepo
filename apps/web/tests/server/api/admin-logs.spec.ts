@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requireAuthSession, writeAdminLog, listAdminLogsForManagement, getQuery } = vi.hoisted(() => ({
+const { requireAuthSession, service, adminLog, getQuery } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
-  writeAdminLog: vi.fn(),
-  listAdminLogsForManagement: vi.fn(),
+  service: {
+    listAdminLogsForManagement: vi.fn()
+  },
+  adminLog: {
+    write: vi.fn()
+  },
   getQuery: vi.fn()
 }))
 
@@ -22,12 +26,14 @@ vi.mock('h3', async () => {
 })
 
 vi.mock('../../../server/utils/auth', () => ({
-  requireAuthSession,
-  writeAdminLog
+  requireAuthSession
 }))
 
-vi.mock('../../../server/utils/logs', () => ({
-  listAdminLogsForManagement
+vi.mock('../../../server/modules/logs/logs.module', () => ({
+  getLogsModule: () => ({
+    service,
+    adminLog
+  })
 }))
 
 import listLogsHandler from '../../../server/api/admin/logs/index.get'
@@ -56,7 +62,7 @@ describe('admin logs api', () => {
       pageSize: '20',
       cursor: 'cursor-token'
     })
-    listAdminLogsForManagement.mockResolvedValue({
+    service.listAdminLogsForManagement.mockResolvedValue({
       items: [
         {
           id: 'log-1',
@@ -80,7 +86,7 @@ describe('admin logs api', () => {
 
     const response = await listLogsHandler({} as never)
 
-    expect(listAdminLogsForManagement).toHaveBeenCalledWith(sampleSession, {
+    expect(service.listAdminLogsForManagement).toHaveBeenCalledWith(sampleSession, {
       cursor: 'cursor-token',
       pageSize: 20
     })
@@ -112,7 +118,7 @@ describe('admin logs api', () => {
 
     requireAuthSession.mockResolvedValue(sampleSession)
     getQuery.mockReturnValue({})
-    listAdminLogsForManagement.mockRejectedValue({
+    service.listAdminLogsForManagement.mockRejectedValue({
       statusCode: 500,
       statusMessage: 'Falha ao consultar os logs.'
     })
@@ -120,7 +126,7 @@ describe('admin logs api', () => {
     const response = await listLogsHandler(event)
 
     expect(event.node.res.statusCode).toBe(500)
-    expect(writeAdminLog).toHaveBeenCalledWith(
+    expect(adminLog.write).toHaveBeenCalledWith(
       sampleSession,
       expect.objectContaining({
         action: 'update',

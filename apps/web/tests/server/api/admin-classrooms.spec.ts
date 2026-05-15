@@ -2,21 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   requireAuthSession,
-  writeAdminLog,
-  listAdminClassroomsForManagement,
-  createAdminClassroom,
-  getAdminClassroomByUuid,
-  updateAdminClassroomByUuid,
-  deleteAdminClassroomByUuid,
+  service,
+  adminLog,
   readBody
 } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
-  writeAdminLog: vi.fn(),
-  listAdminClassroomsForManagement: vi.fn(),
-  createAdminClassroom: vi.fn(),
-  getAdminClassroomByUuid: vi.fn(),
-  updateAdminClassroomByUuid: vi.fn(),
-  deleteAdminClassroomByUuid: vi.fn(),
+  service: {
+    listAdminClassroomsForManagement: vi.fn(),
+    createAdminClassroom: vi.fn(),
+    getAdminClassroomByUuid: vi.fn(),
+    updateAdminClassroomByUuid: vi.fn(),
+    deleteAdminClassroomByUuid: vi.fn()
+  },
+  adminLog: {
+    write: vi.fn()
+  },
   readBody: vi.fn()
 }))
 
@@ -35,16 +35,14 @@ vi.mock('h3', async () => {
 })
 
 vi.mock('../../../server/utils/auth', () => ({
-  requireAuthSession,
-  writeAdminLog
+  requireAuthSession
 }))
 
-vi.mock('../../../server/utils/classrooms', () => ({
-  listAdminClassroomsForManagement,
-  createAdminClassroom,
-  getAdminClassroomByUuid,
-  updateAdminClassroomByUuid,
-  deleteAdminClassroomByUuid
+vi.mock('../../../server/modules/classrooms/classrooms.module', () => ({
+  getClassroomsModule: () => ({
+    service,
+    adminLog
+  })
 }))
 
 import listClassroomsHandler from '../../../server/api/admin/classrooms/index.get'
@@ -90,7 +88,7 @@ describe('admin classrooms api', () => {
 
   it('lists admin classrooms', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    listAdminClassroomsForManagement.mockResolvedValue([sampleClassroom])
+    service.listAdminClassroomsForManagement.mockResolvedValue([sampleClassroom])
 
     const response = await listClassroomsHandler({} as never)
 
@@ -103,11 +101,11 @@ describe('admin classrooms api', () => {
   it('creates a classroom', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
     readBody.mockResolvedValue(sampleClassroom)
-    createAdminClassroom.mockResolvedValue(sampleClassroom)
+    service.createAdminClassroom.mockResolvedValue(sampleClassroom)
 
     const response = await createClassroomHandler({} as never)
 
-    expect(createAdminClassroom).toHaveBeenCalledWith(
+    expect(service.createAdminClassroom).toHaveBeenCalledWith(
       sampleSession,
       expect.objectContaining({ uuid: sampleClassroom.uuid })
     )
@@ -119,7 +117,7 @@ describe('admin classrooms api', () => {
 
   it('gets a single classroom', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    getAdminClassroomByUuid.mockResolvedValue(sampleClassroom)
+    service.getAdminClassroomByUuid.mockResolvedValue(sampleClassroom)
 
     const response = await getClassroomHandler({
       context: {
@@ -141,7 +139,7 @@ describe('admin classrooms api', () => {
       ...sampleClassroom,
       name: 'Turma Principal revisada'
     })
-    updateAdminClassroomByUuid.mockResolvedValue({
+    service.updateAdminClassroomByUuid.mockResolvedValue({
       ...sampleClassroom,
       name: 'Turma Principal revisada'
     })
@@ -154,7 +152,7 @@ describe('admin classrooms api', () => {
       }
     } as never)
 
-    expect(updateAdminClassroomByUuid).toHaveBeenCalledWith(
+    expect(service.updateAdminClassroomByUuid).toHaveBeenCalledWith(
       sampleSession,
       sampleClassroom.uuid,
       expect.objectContaining({ name: 'Turma Principal revisada' })
@@ -164,7 +162,7 @@ describe('admin classrooms api', () => {
 
   it('soft deletes a classroom', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    deleteAdminClassroomByUuid.mockResolvedValue({
+    service.deleteAdminClassroomByUuid.mockResolvedValue({
       ...sampleClassroom,
       deletedAt: '2026-05-08T12:00:00.000Z'
     })
@@ -177,7 +175,7 @@ describe('admin classrooms api', () => {
       }
     } as never)
 
-    expect(deleteAdminClassroomByUuid).toHaveBeenCalledWith(sampleSession, sampleClassroom.uuid)
+    expect(service.deleteAdminClassroomByUuid).toHaveBeenCalledWith(sampleSession, sampleClassroom.uuid)
     expect(response.status).toBe('success')
   })
 })
