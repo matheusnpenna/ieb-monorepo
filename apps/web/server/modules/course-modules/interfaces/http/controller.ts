@@ -6,7 +6,7 @@ import type {
   ModuleDetailResponse
 } from '@ieb/shared'
 import { readBody, setResponseStatus, type H3Event } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getCourseModulesModule } from '../../course-modules.module'
 
 const getErrorStatusCode = (error: unknown) =>

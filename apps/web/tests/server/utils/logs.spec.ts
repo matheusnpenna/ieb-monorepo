@@ -1,15 +1,18 @@
 import type { AdminActivityLog } from '@ieb/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getLogsModule } from '../../../server/modules/logs/logs.module'
+import type { LogsService } from '../../../server/modules/logs/application/logs.service'
 
 const { getFirebaseAdminCollection } = vi.hoisted(() => ({
   getFirebaseAdminCollection: vi.fn()
 }))
 
-vi.mock('../../../server/utils/firebase-admin', () => ({
+vi.mock('../../../server/modules/shared/infrastructure/firebase-admin', () => ({
   getFirebaseAdminCollection
 }))
 
-import { listAdminLogsForManagement } from '../../../server/utils/logs'
+const listAdminLogsForManagement = (...parameters: Parameters<LogsService['listAdminLogsForManagement']>) =>
+  getLogsModule().service.listAdminLogsForManagement(...parameters)
 
 const adminSession = {
   user: {

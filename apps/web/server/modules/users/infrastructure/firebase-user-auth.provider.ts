@@ -1,5 +1,5 @@
 import type { UserAuthProvider } from '../application/ports'
-import { getFirebaseAdminAuth } from '../../../utils/firebase-admin'
+import { getFirebaseAdminAuth } from '../../shared/infrastructure/firebase-admin'
 
 export class FirebaseUserAuthProvider implements UserAuthProvider {
   async createUser(input: {

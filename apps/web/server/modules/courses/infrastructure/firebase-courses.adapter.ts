@@ -8,9 +8,9 @@ import {
   listAccessibleCourses,
   listAdminCoursesForManagement,
   updateAdminCourseBySlug
-} from '../../../utils/courses'
+} from '../../shared/infrastructure/course-catalog'
 
-export class LegacyCoursesAdapter implements CoursesBackendPort {
+export class FirebaseCoursesAdapter implements CoursesBackendPort {
   listAccessibleCourses = listAccessibleCourses
   getAccessibleCourseDetailBySlug = getAccessibleCourseDetailBySlug
   getHomeMetrics = getHomeMetrics

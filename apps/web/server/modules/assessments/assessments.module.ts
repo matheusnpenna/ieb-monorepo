@@ -1,10 +1,10 @@
 import { AssessmentsService } from './application/assessments.service'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
-import { LegacyAssessmentsAdapter } from './infrastructure/legacy-assessments.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { FirebaseAssessmentsAdapter } from './infrastructure/firebase-assessments.adapter'
 
 interface AssessmentsModule {
   service: AssessmentsService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: AssessmentsModule | null = null
@@ -13,9 +13,9 @@ export const getAssessmentsModule = (): AssessmentsModule => {
   if (moduleInstance) return moduleInstance
 
   moduleInstance = {
-    adminLog: new LegacyAdminLogAdapter(),
+    adminLog: new AdminLogAdapter(),
     service: new AssessmentsService({
-      backend: new LegacyAssessmentsAdapter()
+      backend: new FirebaseAssessmentsAdapter()
     })
   }
 

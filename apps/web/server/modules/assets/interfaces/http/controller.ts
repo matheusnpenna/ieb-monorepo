@@ -1,6 +1,6 @@
 import type { AdminUploadedImageResponse, AuthSessionContext } from '@ieb/shared'
 import { createError, readMultipartFormData, setResponseStatus, type H3Event } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getAssetsModule } from '../../assets.module'
 import { isAdminImageField } from '../../domain/validation'
 

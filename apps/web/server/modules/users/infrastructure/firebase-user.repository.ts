@@ -1,6 +1,6 @@
 import type { User } from '@ieb/shared'
 import type { UserRepository } from '../application/ports'
-import { getFirebaseAdminCollection } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase-admin'
 
 const toUserDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({

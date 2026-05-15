@@ -10,9 +10,9 @@ import {
   submitAssessmentAttemptBySlugs,
   updateAdminAssessmentBySlug,
   updateAdminAssessmentAttemptScoreById
-} from '../../../utils/courses'
+} from '../../shared/infrastructure/course-catalog'
 
-export class LegacyAssessmentsAdapter implements AssessmentsBackendPort {
+export class FirebaseAssessmentsAdapter implements AssessmentsBackendPort {
   listAdminAssessmentsForManagement = listAdminAssessmentsForManagement
   getAdminAssessmentBySlug = getAdminAssessmentBySlug
   createAdminAssessment = createAdminAssessment

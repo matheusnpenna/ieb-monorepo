@@ -1,6 +1,6 @@
 import type { AdminLogsResponse, AuthSessionContext } from '@ieb/shared'
 import { getQuery, setResponseStatus, type H3Event } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getLogsModule } from '../../logs.module'
 
 const getErrorStatusCode = (error: unknown) =>

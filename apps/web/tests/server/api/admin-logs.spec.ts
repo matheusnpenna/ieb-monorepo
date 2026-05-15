@@ -25,7 +25,7 @@ vi.mock('h3', async () => {
   }
 })
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   requireAuthSession
 }))
 

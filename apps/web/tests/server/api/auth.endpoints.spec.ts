@@ -45,7 +45,7 @@ vi.mock('h3', async () => {
   }
 })
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   loginWithEmailAndPassword,
   writeAdminLog,
   clearAuthSessionCookie,
@@ -78,11 +78,6 @@ vi.mock('../../../server/modules/auth/interfaces/http/cookies', () => ({
   setAuthSessionCookieForEvent: setAuthSessionCookie,
   clearAuthSessionCookieForEvent: clearAuthSessionCookie,
   getAuthSessionCookieFromEvent: vi.fn(() => 'session-cookie')
-}))
-
-vi.mock('../../../server/utils/enrollments', () => ({
-  listAdminUserEnrollments,
-  updateAdminUserEnrollments
 }))
 
 vi.mock('../../../server/modules/users/users.module', () => ({

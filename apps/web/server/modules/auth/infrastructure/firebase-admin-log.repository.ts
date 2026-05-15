@@ -1,6 +1,6 @@
 import type { AuthSessionContext } from '@ieb/shared'
 import type { AdminLogRepository, WriteAdminLogInput } from '../application/ports'
-import { getFirebaseAdminCollection, getFirebaseAdminFirestore } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection, getFirebaseAdminFirestore } from '../../shared/infrastructure/firebase-admin'
 
 interface FirebaseAdminLogRepositoryDependencies {
   clock: {

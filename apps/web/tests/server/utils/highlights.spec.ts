@@ -1,27 +1,35 @@
 import type { PlatformHighlight } from '@ieb/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getHighlightsModule } from '../../../server/modules/highlights/highlights.module'
+import type { HighlightsService } from '../../../server/modules/highlights/application/highlights.service'
 
 const { getFirebaseAdminCollection, writeAdminLog } = vi.hoisted(() => ({
   getFirebaseAdminCollection: vi.fn(),
   writeAdminLog: vi.fn()
 }))
 
-vi.mock('../../../server/utils/firebase-admin', () => ({
+vi.mock('../../../server/modules/shared/infrastructure/firebase-admin', () => ({
   getFirebaseAdminCollection
 }))
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   writeAdminLog
 }))
 
-import {
-  createAdminHighlight,
-  deleteAdminHighlightById,
-  getAdminHighlightById,
-  listActiveHomeHighlights,
-  listAdminHighlightsForManagement,
-  updateAdminHighlightById
-} from '../../../server/utils/highlights'
+const highlightService = () => getHighlightsModule().service
+const listAdminHighlightsForManagement = (
+  ...parameters: Parameters<HighlightsService['listAdminHighlightsForManagement']>
+) => highlightService().listAdminHighlightsForManagement(...parameters)
+const getAdminHighlightById = (...parameters: Parameters<HighlightsService['getAdminHighlightById']>) =>
+  highlightService().getAdminHighlightById(...parameters)
+const createAdminHighlight = (...parameters: Parameters<HighlightsService['createAdminHighlight']>) =>
+  highlightService().createAdminHighlight(...parameters)
+const updateAdminHighlightById = (...parameters: Parameters<HighlightsService['updateAdminHighlightById']>) =>
+  highlightService().updateAdminHighlightById(...parameters)
+const deleteAdminHighlightById = (...parameters: Parameters<HighlightsService['deleteAdminHighlightById']>) =>
+  highlightService().deleteAdminHighlightById(...parameters)
+const listActiveHomeHighlights = (...parameters: Parameters<HighlightsService['listActiveHomeHighlights']>) =>
+  highlightService().listActiveHomeHighlights(...parameters)
 
 const createDocumentSnapshot = <TDocument extends { id: string }>(document: TDocument) => ({
   id: document.id,

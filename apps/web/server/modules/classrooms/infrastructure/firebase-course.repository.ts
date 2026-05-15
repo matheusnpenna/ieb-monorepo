@@ -1,6 +1,6 @@
 import type { Course } from '@ieb/shared'
 import type { ClassroomCourseRepository } from '../application/ports'
-import { getFirebaseAdminCollection } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase-admin'
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({

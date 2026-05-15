@@ -34,17 +34,9 @@ vi.mock('h3', async () => {
   }
 })
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   requireAuthSession,
   writeAdminLog
-}))
-
-vi.mock('../../../server/utils/users', () => ({
-  listAdminUsersForManagement,
-  createAdminUser,
-  getAdminUserById,
-  updateAdminUserById,
-  deleteAdminUserById
 }))
 
 vi.mock('../../../server/modules/users/users.module', () => ({

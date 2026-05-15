@@ -6,9 +6,9 @@ import {
   getAdminModuleBySlug,
   listAdminModulesForManagement,
   updateAdminModuleBySlug
-} from '../../../utils/courses'
+} from '../../shared/infrastructure/course-catalog'
 
-export class LegacyCourseModulesAdapter implements CourseModulesBackendPort {
+export class FirebaseCourseModulesAdapter implements CourseModulesBackendPort {
   listAdminModulesForManagement = listAdminModulesForManagement
   getAdminModuleBySlug = getAdminModuleBySlug
   createAdminModule = createAdminModule

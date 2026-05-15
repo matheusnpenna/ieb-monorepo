@@ -4,7 +4,7 @@ import type {
   AuthSessionContext
 } from '@ieb/shared'
 import { readBody, setResponseStatus, type H3Event } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getAssessmentSettingsModule } from '../../assessment-settings.module'
 import { SETTINGS_DOCUMENT_ID } from '../../domain/validation'
 

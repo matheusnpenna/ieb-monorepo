@@ -1,11 +1,11 @@
 import { HighlightsService } from './application/highlights.service'
 import { FirebaseHighlightRepository } from './infrastructure/firebase-highlight.repository'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
 import { NodeHighlightIdGenerator, SystemHighlightClock } from './infrastructure/runtime-providers'
 
 interface HighlightsModule {
   service: HighlightsService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: HighlightsModule | null = null
@@ -16,7 +16,7 @@ export const getHighlightsModule = (): HighlightsModule => {
   }
 
   const repository = new FirebaseHighlightRepository()
-  const adminLog = new LegacyAdminLogAdapter()
+  const adminLog = new AdminLogAdapter()
 
   moduleInstance = {
     adminLog,

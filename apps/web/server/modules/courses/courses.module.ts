@@ -1,5 +1,5 @@
 import { CoursesService } from './application/courses.service'
-import { LegacyCoursesAdapter } from './infrastructure/legacy-courses.adapter'
+import { FirebaseCoursesAdapter } from './infrastructure/firebase-courses.adapter'
 
 interface CoursesModule {
   service: CoursesService
@@ -14,7 +14,7 @@ export const getCoursesModule = (): CoursesModule => {
 
   moduleInstance = {
     service: new CoursesService({
-      backend: new LegacyCoursesAdapter()
+      backend: new FirebaseCoursesAdapter()
     })
   }
 

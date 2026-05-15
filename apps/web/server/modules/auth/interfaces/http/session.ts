@@ -1,15 +1,12 @@
-import type {
-  AuthSessionContext,
-  RegistrationStatusResponse
-} from '@ieb/shared'
+import type { AuthSessionContext, RegistrationStatusResponse } from '@ieb/shared'
 import type { H3Event } from 'h3'
-import { getAuthModule } from '../modules/auth/auth.module'
-import type { RegisterAccountInput, WriteAdminLogInput } from '../modules/auth/application/ports'
+import { getAuthModule } from '../../auth.module'
+import type { RegisterAccountInput, WriteAdminLogInput } from '../../application/ports'
 import {
   clearAuthSessionCookieForEvent,
   getAuthSessionCookieFromEvent,
   setAuthSessionCookieForEvent
-} from '../modules/auth/interfaces/http/cookies'
+} from './cookies'
 
 export const setAuthSessionCookie = async (event: H3Event, idToken: string) => {
   await setAuthSessionCookieForEvent(event, idToken)

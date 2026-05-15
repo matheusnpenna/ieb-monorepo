@@ -1,26 +1,33 @@
 import type { Classroom, Course } from '@ieb/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getClassroomsModule } from '../../../server/modules/classrooms/classrooms.module'
+import type { ClassroomsService } from '../../../server/modules/classrooms/application/classrooms.service'
 
 const { getFirebaseAdminCollection, writeAdminLog } = vi.hoisted(() => ({
   getFirebaseAdminCollection: vi.fn(),
   writeAdminLog: vi.fn()
 }))
 
-vi.mock('../../../server/utils/firebase-admin', () => ({
+vi.mock('../../../server/modules/shared/infrastructure/firebase-admin', () => ({
   getFirebaseAdminCollection
 }))
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   writeAdminLog
 }))
 
-import {
-  createAdminClassroom,
-  deleteAdminClassroomByUuid,
-  getAdminClassroomByUuid,
-  listAdminClassroomsForManagement,
-  updateAdminClassroomByUuid
-} from '../../../server/utils/classrooms'
+const classroomService = () => getClassroomsModule().service
+const listAdminClassroomsForManagement = (
+  ...parameters: Parameters<ClassroomsService['listAdminClassroomsForManagement']>
+) => classroomService().listAdminClassroomsForManagement(...parameters)
+const getAdminClassroomByUuid = (...parameters: Parameters<ClassroomsService['getAdminClassroomByUuid']>) =>
+  classroomService().getAdminClassroomByUuid(...parameters)
+const createAdminClassroom = (...parameters: Parameters<ClassroomsService['createAdminClassroom']>) =>
+  classroomService().createAdminClassroom(...parameters)
+const updateAdminClassroomByUuid = (...parameters: Parameters<ClassroomsService['updateAdminClassroomByUuid']>) =>
+  classroomService().updateAdminClassroomByUuid(...parameters)
+const deleteAdminClassroomByUuid = (...parameters: Parameters<ClassroomsService['deleteAdminClassroomByUuid']>) =>
+  classroomService().deleteAdminClassroomByUuid(...parameters)
 
 const createDocumentSnapshot = <TDocument extends { id: string }>(document: TDocument) => ({
   id: document.id,

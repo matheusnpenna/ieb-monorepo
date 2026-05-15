@@ -1,6 +1,6 @@
 import type { IdentityProvider } from '../application/ports'
 import { createAuthError } from '../domain/errors'
-import { getFirebaseAdminAuth } from '../../../utils/firebase-admin'
+import { getFirebaseAdminAuth } from '../../shared/infrastructure/firebase-admin'
 
 interface SessionRuntimeConfig {
   firebase: {

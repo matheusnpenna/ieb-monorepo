@@ -28,14 +28,9 @@ vi.mock('h3', async () => {
   }
 })
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   requireAuthSession,
   writeAdminLog
-}))
-
-vi.mock('../../../server/utils/assessment-settings', () => ({
-  getAdminAssessmentPlatformSettings,
-  updateAdminAssessmentPlatformSettings
 }))
 
 vi.mock('../../../server/modules/assessment-settings/assessment-settings.module', () => ({

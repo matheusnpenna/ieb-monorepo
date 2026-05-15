@@ -1,6 +1,6 @@
 import type { AdminActivityLog } from '@ieb/shared'
 import type { LogRepository } from '../application/ports'
-import { getFirebaseAdminCollection } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase-admin'
 
 const toAdminLogDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({

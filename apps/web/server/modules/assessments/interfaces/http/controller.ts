@@ -11,7 +11,7 @@ import type {
   StudentModuleAssessmentResponse
 } from '@ieb/shared'
 import { getQuery, readBody, setResponseStatus, type H3Event } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getAssessmentsModule } from '../../assessments.module'
 
 const getErrorStatusCode = (error: unknown) =>

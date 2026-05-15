@@ -6,7 +6,7 @@ const { getFirebaseAdminCollection, getFirebaseAdminFirestore } = vi.hoisted(() 
   getFirebaseAdminFirestore: vi.fn(() => ({}))
 }))
 
-vi.mock('../../../server/utils/firebase-admin', () => ({
+vi.mock('../../../server/modules/shared/infrastructure/firebase-admin', () => ({
   getFirebaseAdminCollection,
   getFirebaseAdminFirestore
 }))
@@ -44,7 +44,7 @@ import {
   createLessonCommentBySlugs,
   updateLessonCommentBySlugs,
   deleteLessonCommentBySlugs
-} from '../../../server/utils/courses'
+} from '../../../server/modules/shared/infrastructure/course-catalog'
 
 const buildCourse = (overrides: Partial<Course> & Pick<Course, 'id' | 'title' | 'slug'>): Course => ({
   id: overrides.id,

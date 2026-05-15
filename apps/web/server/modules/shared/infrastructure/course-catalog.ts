@@ -25,9 +25,12 @@ import type {
 } from '@ieb/shared'
 import { createError } from 'h3'
 import { randomUUID } from 'node:crypto'
-import { getAssessmentPlatformSettings } from './assessment-settings'
-import { writeAdminLog } from './auth'
+import { getAssessmentSettingsModule } from '../../assessment-settings/assessment-settings.module'
+import { writeAdminLog } from '../../auth/interfaces/http/session'
 import { getFirebaseAdminCollection } from './firebase-admin'
+
+const getAssessmentPlatformSettings = async () =>
+  await getAssessmentSettingsModule().service.getAssessmentPlatformSettings()
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({

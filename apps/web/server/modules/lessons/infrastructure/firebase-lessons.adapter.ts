@@ -12,9 +12,9 @@ import {
   updateAdminLessonBySlug,
   updateLessonCommentBySlugs,
   updateLessonProgressBySlugs
-} from '../../../utils/courses'
+} from '../../shared/infrastructure/course-catalog'
 
-export class LegacyLessonsAdapter implements LessonsBackendPort {
+export class FirebaseLessonsAdapter implements LessonsBackendPort {
   listAdminLessonsForManagement = listAdminLessonsForManagement
   getAdminLessonBySlug = getAdminLessonBySlug
   createAdminLesson = createAdminLesson

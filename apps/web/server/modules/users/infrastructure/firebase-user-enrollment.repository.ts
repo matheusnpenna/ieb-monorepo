@@ -1,6 +1,6 @@
 import type { CourseEnrollment } from '@ieb/shared'
 import type { UserEnrollmentRepository } from '../application/ports'
-import { getFirebaseAdminCollection, getFirebaseAdminFirestore } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection, getFirebaseAdminFirestore } from '../../shared/infrastructure/firebase-admin'
 
 const toEnrollmentDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({

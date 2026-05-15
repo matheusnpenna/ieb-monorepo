@@ -1,12 +1,12 @@
 import { ClassroomsService } from './application/classrooms.service'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
 import { FirebaseClassroomRepository } from './infrastructure/firebase-classroom.repository'
 import { FirebaseClassroomCourseRepository } from './infrastructure/firebase-course.repository'
 import { NodeClassroomIdGenerator, SystemClassroomClock } from './infrastructure/runtime-providers'
 
 interface ClassroomsModule {
   service: ClassroomsService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: ClassroomsModule | null = null
@@ -16,7 +16,7 @@ export const getClassroomsModule = (): ClassroomsModule => {
     return moduleInstance
   }
 
-  const adminLog = new LegacyAdminLogAdapter()
+  const adminLog = new AdminLogAdapter()
 
   moduleInstance = {
     adminLog,

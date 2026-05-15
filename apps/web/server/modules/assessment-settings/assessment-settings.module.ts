@@ -1,11 +1,11 @@
 import { AssessmentSettingsService } from './application/assessment-settings.service'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
 import { FirebaseAssessmentSettingsRepository } from './infrastructure/firebase-assessment-settings.repository'
 import { SystemAssessmentSettingsClock } from './infrastructure/runtime-providers'
 
 interface AssessmentSettingsModule {
   service: AssessmentSettingsService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: AssessmentSettingsModule | null = null
@@ -15,7 +15,7 @@ export const getAssessmentSettingsModule = (): AssessmentSettingsModule => {
     return moduleInstance
   }
 
-  const adminLog = new LegacyAdminLogAdapter()
+  const adminLog = new AdminLogAdapter()
 
   moduleInstance = {
     adminLog,

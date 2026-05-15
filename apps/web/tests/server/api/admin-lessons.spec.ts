@@ -48,12 +48,12 @@ vi.mock('h3', async () => {
   }
 })
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   requireAuthSession,
   writeAdminLog
 }))
 
-vi.mock('../../../server/utils/courses', () => ({
+vi.mock('../../../server/modules/shared/infrastructure/course-catalog', () => ({
   getAccessibleLessonDetailBySlugs,
   updateLessonProgressBySlugs,
   markLessonAsCompletedBySlugs,

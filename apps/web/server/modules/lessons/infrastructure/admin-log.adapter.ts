@@ -1,8 +1,4 @@
 import type { AdminLogPort } from '../application/ports'
-import { writeAdminLog } from '../../../utils/auth'
+import { SharedAdminLogAdapter } from '../../shared/infrastructure/admin-log.adapter'
 
-export class LegacyAdminLogAdapter implements AdminLogPort {
-  async write(...parameters: Parameters<AdminLogPort['write']>) {
-    await writeAdminLog(...parameters)
-  }
-}
+export class AdminLogAdapter extends SharedAdminLogAdapter implements AdminLogPort {}

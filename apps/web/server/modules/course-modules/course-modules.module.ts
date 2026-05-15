@@ -1,10 +1,10 @@
 import { CourseModulesService } from './application/course-modules.service'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
-import { LegacyCourseModulesAdapter } from './infrastructure/legacy-course-modules.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { FirebaseCourseModulesAdapter } from './infrastructure/firebase-course-modules.adapter'
 
 interface CourseModulesModule {
   service: CourseModulesService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: CourseModulesModule | null = null
@@ -15,9 +15,9 @@ export const getCourseModulesModule = (): CourseModulesModule => {
   }
 
   moduleInstance = {
-    adminLog: new LegacyAdminLogAdapter(),
+    adminLog: new AdminLogAdapter(),
     service: new CourseModulesService({
-      backend: new LegacyCourseModulesAdapter()
+      backend: new FirebaseCourseModulesAdapter()
     })
   }
 

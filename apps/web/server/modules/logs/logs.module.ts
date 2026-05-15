@@ -1,10 +1,10 @@
 import { LogsService } from './application/logs.service'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
 import { FirebaseLogRepository } from './infrastructure/firebase-log.repository'
 
 interface LogsModule {
   service: LogsService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: LogsModule | null = null
@@ -15,7 +15,7 @@ export const getLogsModule = (): LogsModule => {
   }
 
   moduleInstance = {
-    adminLog: new LegacyAdminLogAdapter(),
+    adminLog: new AdminLogAdapter(),
     service: new LogsService({
       repository: new FirebaseLogRepository()
     })

@@ -1,8 +1,8 @@
 import { defineEventHandler, getRequestPath } from 'h3'
-import { resolveAuthSession } from '../utils/auth'
+import { resolveAuthSession } from '../modules/auth/interfaces/http/session'
 
 export default defineEventHandler(async (event) => {
-  const pathname = event.req.url
+  const pathname = getRequestPath(event)
 
   if (!pathname.includes('/api/')) return
 

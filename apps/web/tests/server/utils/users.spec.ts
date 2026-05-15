@@ -1,5 +1,7 @@
 import type { User } from '@ieb/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getUsersModule } from '../../../server/modules/users/users.module'
+import type { UsersService } from '../../../server/modules/users/application/users.service'
 
 const { getFirebaseAdminCollection, getFirebaseAdminAuth, writeAdminLog } = vi.hoisted(() => ({
   getFirebaseAdminCollection: vi.fn(),
@@ -7,22 +9,26 @@ const { getFirebaseAdminCollection, getFirebaseAdminAuth, writeAdminLog } = vi.h
   writeAdminLog: vi.fn()
 }))
 
-vi.mock('../../../server/utils/firebase-admin', () => ({
+vi.mock('../../../server/modules/shared/infrastructure/firebase-admin', () => ({
   getFirebaseAdminCollection,
   getFirebaseAdminAuth
 }))
 
-vi.mock('../../../server/utils/auth', () => ({
+vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
   writeAdminLog
 }))
 
-import {
-  createAdminUser,
-  deleteAdminUserById,
-  getAdminUserById,
-  listAdminUsersForManagement,
-  updateAdminUserById
-} from '../../../server/utils/users'
+const usersService = () => getUsersModule().usersService
+const listAdminUsersForManagement = (...parameters: Parameters<UsersService['listAdminUsersForManagement']>) =>
+  usersService().listAdminUsersForManagement(...parameters)
+const getAdminUserById = (...parameters: Parameters<UsersService['getAdminUserById']>) =>
+  usersService().getAdminUserById(...parameters)
+const createAdminUser = (...parameters: Parameters<UsersService['createAdminUser']>) =>
+  usersService().createAdminUser(...parameters)
+const updateAdminUserById = (...parameters: Parameters<UsersService['updateAdminUserById']>) =>
+  usersService().updateAdminUserById(...parameters)
+const deleteAdminUserById = (...parameters: Parameters<UsersService['deleteAdminUserById']>) =>
+  usersService().deleteAdminUserById(...parameters)
 
 const createDocumentSnapshot = <TDocument extends { id: string }>(document: TDocument) => ({
   id: document.id,

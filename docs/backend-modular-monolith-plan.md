@@ -47,13 +47,16 @@ Atualizado em 2026-05-15.
 - Endpoints sem import direto de `server/utils`, `readBody`, `getQuery`, `setResponseStatus` ou `writeAdminLog`.
 - Modulos implementados para as areas ja migradas: `auth`, `users`, `assets`, `assessment-settings`, `highlights`, `logs`, `classrooms`, `courses`, `course-modules`, `lessons` e `assessments`.
 - A fatia de `courses.ts` foi separada na camada de endpoints em quatro modulos: `courses`, `course-modules`, `lessons` e `assessments`.
-- Os novos modulos de cursos ainda usam adapters legados internos apontando para `server/utils/courses.ts`; essa compatibilidade preserva comportamento enquanto a logica de infraestrutura e dominio e extraida em passos menores.
+- `apps/web/server/modules`: sem imports diretos de `server/utils/*`.
+- `server/utils/auth.ts`, `server/utils/firebase-admin.ts` e `server/utils/courses.ts` permanecem apenas como facades temporarias de compatibilidade.
+- Os adapters legados de cursos foram substituidos por adapters Firebase nos modulos `courses`, `course-modules`, `lessons` e `assessments`.
+- A implementacao compartilhada que ainda concentra comportamento de catalogo, progresso e avaliacoes fica em `modules/shared/infrastructure/course-catalog.ts`; ela deve ser quebrada em repositories/use cases menores nas proximas fatias.
 
 ## Proxima etapa recomendada
 
-1. Substituir os legacy adapters dos modulos `courses`, `course-modules`, `lessons` e `assessments` por repositories e providers proprios.
-2. Quebrar `server/utils/courses.ts` por responsabilidade, mantendo facades temporarias apenas onde testes ou chamadas antigas ainda dependerem delas.
-3. Mover validacoes de payload e regras de negocio para `domain`/`application` desses quatro modulos.
+1. Quebrar `modules/shared/infrastructure/course-catalog.ts` por responsabilidade, criando repositories/projections proprios para `courses`, `course-modules`, `lessons` e `assessments`.
+2. Mover validacoes de payload e regras de negocio para `domain`/`application` desses quatro modulos.
+3. Remover as facades temporarias em `server/utils/*` quando nao houver testes ou chamadas antigas dependentes delas.
 4. Remover imports in-process entre dominios quando houver uma porta publica ou evento equivalente.
 
 ## Preparacao para microservicos

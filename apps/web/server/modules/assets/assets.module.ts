@@ -1,11 +1,11 @@
 import { AssetsService } from './application/assets.service'
-import { LegacyAdminLogAdapter } from './infrastructure/admin-log.adapter'
+import { AdminLogAdapter } from './infrastructure/admin-log.adapter'
 import { FirebaseAssetStorage } from './infrastructure/firebase-asset-storage'
 import { NodeAssetIdGenerator, SystemAssetClock } from './infrastructure/runtime-providers'
 
 interface AssetsModule {
   service: AssetsService
-  adminLog: LegacyAdminLogAdapter
+  adminLog: AdminLogAdapter
 }
 
 let moduleInstance: AssetsModule | null = null
@@ -15,7 +15,7 @@ export const getAssetsModule = (): AssetsModule => {
     return moduleInstance
   }
 
-  const adminLog = new LegacyAdminLogAdapter()
+  const adminLog = new AdminLogAdapter()
 
   moduleInstance = {
     adminLog,

@@ -1,5 +1,5 @@
 import type { AssetStorage } from '../application/ports'
-import { getFirebaseAdminBucket } from '../../../utils/firebase-admin'
+import { getFirebaseAdminBucket } from '../../shared/infrastructure/firebase-admin'
 
 export class FirebaseAssetStorage implements AssetStorage {
   async savePublicObject(input: {

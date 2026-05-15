@@ -7,7 +7,7 @@ import type {
   AuthSessionContext
 } from '@ieb/shared'
 import { getQuery, readBody, setResponseStatus, type H3Event } from 'h3'
-import { requireAuthSession } from '../../../../utils/auth'
+import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getUsersModule } from '../../users.module'
 
 const getErrorStatusCode = (error: unknown) =>

@@ -1,6 +1,6 @@
 import type { Classroom } from '@ieb/shared'
 import type { AuthClassroomRepository } from '../application/ports'
-import { getFirebaseAdminCollection } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase-admin'
 
 export class FirebaseAuthClassroomRepository implements AuthClassroomRepository {
   async findByUuid(classroomUuid: string) {

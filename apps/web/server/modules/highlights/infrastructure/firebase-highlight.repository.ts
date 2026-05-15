@@ -1,6 +1,6 @@
 import type { PlatformHighlight } from '@ieb/shared'
 import type { HighlightRepository } from '../application/ports'
-import { getFirebaseAdminCollection } from '../../../utils/firebase-admin'
+import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase-admin'
 
 const toHighlightDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
