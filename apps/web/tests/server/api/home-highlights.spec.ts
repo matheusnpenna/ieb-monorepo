@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requireAuthSession, writeAdminLog, listActiveHomeHighlights } = vi.hoisted(() => ({
+const { requireAuthSession, service, adminLog } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
-  writeAdminLog: vi.fn(),
-  listActiveHomeHighlights: vi.fn()
+  service: {
+    listActiveHomeHighlights: vi.fn()
+  },
+  adminLog: {
+    write: vi.fn()
+  }
 }))
 
 vi.hoisted(() => {
@@ -12,12 +16,14 @@ vi.hoisted(() => {
 })
 
 vi.mock('../../../server/utils/auth', () => ({
-  requireAuthSession,
-  writeAdminLog
+  requireAuthSession
 }))
 
-vi.mock('../../../server/utils/highlights', () => ({
-  listActiveHomeHighlights
+vi.mock('../../../server/modules/highlights/highlights.module', () => ({
+  getHighlightsModule: () => ({
+    service,
+    adminLog
+  })
 }))
 
 import listHomeHighlightsHandler from '../../../server/api/home/highlights/index.get'
@@ -42,7 +48,7 @@ describe('home highlights api', () => {
 
   it('lists active home highlights', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    listActiveHomeHighlights.mockResolvedValue([
+    service.listActiveHomeHighlights.mockResolvedValue([
       {
         id: 'highlight-1',
         kind: 'announcement',

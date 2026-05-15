@@ -26,13 +26,14 @@
     "hls.js": "^1.6.13",
     "nuxt": "^4.2.1",
     "plyr": "^3.8.3",
-    "vue": "^3.5.33"
+    "vue": "^3.5.33",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "@vitejs/plugin-vue": "^6.0.6",
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^25.6.0",
+    "@vitejs/plugin-vue": "^6.0.6",
     "dotenv": "^17.4.2",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",

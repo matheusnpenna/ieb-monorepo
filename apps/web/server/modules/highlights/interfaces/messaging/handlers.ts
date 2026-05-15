@@ -1,0 +1,1 @@
+export const HIGHLIGHTS_MESSAGING_HANDLERS: [] = []

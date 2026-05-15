@@ -2,21 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   requireAuthSession,
-  writeAdminLog,
-  listAdminHighlightsForManagement,
-  createAdminHighlight,
-  getAdminHighlightById,
-  updateAdminHighlightById,
-  deleteAdminHighlightById,
+  service,
+  adminLog,
   readBody
 } = vi.hoisted(() => ({
   requireAuthSession: vi.fn(),
-  writeAdminLog: vi.fn(),
-  listAdminHighlightsForManagement: vi.fn(),
-  createAdminHighlight: vi.fn(),
-  getAdminHighlightById: vi.fn(),
-  updateAdminHighlightById: vi.fn(),
-  deleteAdminHighlightById: vi.fn(),
+  service: {
+    listAdminHighlightsForManagement: vi.fn(),
+    createAdminHighlight: vi.fn(),
+    getAdminHighlightById: vi.fn(),
+    updateAdminHighlightById: vi.fn(),
+    deleteAdminHighlightById: vi.fn()
+  },
+  adminLog: {
+    write: vi.fn()
+  },
   readBody: vi.fn()
 }))
 
@@ -35,16 +35,14 @@ vi.mock('h3', async () => {
 })
 
 vi.mock('../../../server/utils/auth', () => ({
-  requireAuthSession,
-  writeAdminLog
+  requireAuthSession
 }))
 
-vi.mock('../../../server/utils/highlights', () => ({
-  listAdminHighlightsForManagement,
-  createAdminHighlight,
-  getAdminHighlightById,
-  updateAdminHighlightById,
-  deleteAdminHighlightById
+vi.mock('../../../server/modules/highlights/highlights.module', () => ({
+  getHighlightsModule: () => ({
+    service,
+    adminLog
+  })
 }))
 
 import listHighlightsHandler from '../../../server/api/admin/highlights/index.get'
@@ -92,7 +90,7 @@ describe('admin highlights api', () => {
 
   it('lists admin highlights', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    listAdminHighlightsForManagement.mockResolvedValue([sampleHighlight])
+    service.listAdminHighlightsForManagement.mockResolvedValue([sampleHighlight])
 
     const response = await listHighlightsHandler({} as never)
 
@@ -105,7 +103,7 @@ describe('admin highlights api', () => {
   it('creates a highlight', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
     readBody.mockResolvedValue(sampleHighlight)
-    createAdminHighlight.mockResolvedValue(sampleHighlight)
+    service.createAdminHighlight.mockResolvedValue(sampleHighlight)
 
     const response = await createHighlightHandler({} as never)
 
@@ -117,7 +115,7 @@ describe('admin highlights api', () => {
 
   it('gets a single highlight', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    getAdminHighlightById.mockResolvedValue(sampleHighlight)
+    service.getAdminHighlightById.mockResolvedValue(sampleHighlight)
 
     const response = await getHighlightHandler({
       context: {
@@ -139,7 +137,7 @@ describe('admin highlights api', () => {
       ...sampleHighlight,
       title: 'Aviso atualizado'
     })
-    updateAdminHighlightById.mockResolvedValue({
+    service.updateAdminHighlightById.mockResolvedValue({
       ...sampleHighlight,
       title: 'Aviso atualizado'
     })
@@ -157,7 +155,7 @@ describe('admin highlights api', () => {
 
   it('soft deletes a highlight', async () => {
     requireAuthSession.mockResolvedValue(sampleSession)
-    deleteAdminHighlightById.mockResolvedValue({
+    service.deleteAdminHighlightById.mockResolvedValue({
       ...sampleHighlight,
       deletedAt: '2026-05-08T12:00:00.000Z'
     })
