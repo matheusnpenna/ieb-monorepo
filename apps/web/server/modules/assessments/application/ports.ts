@@ -2,6 +2,7 @@ import type {
   AdminAssessmentAttemptViewItem,
   AdminAssessmentInput,
   AdminAssessmentAttemptScoreInput,
+  AccountAssessmentAttemptItem,
   Assessment,
   AuthSessionContext,
   StudentAssessmentSubmissionData,
@@ -33,6 +34,7 @@ export interface AssessmentsBackendPort {
     assessmentSlug: string,
     answers: Record<string, string | string[]>
   ): Promise<StudentAssessmentSubmissionData>
+  listAccountAssessmentAttempts(session: AuthSessionContext): Promise<AccountAssessmentAttemptItem[]>
   listAdminAssessmentAttemptsForManagement(session: AuthSessionContext): Promise<AdminAssessmentAttemptViewItem[]>
   updateAdminAssessmentAttemptScoreById(
     session: AuthSessionContext,

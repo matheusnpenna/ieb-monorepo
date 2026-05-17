@@ -18,6 +18,12 @@ export interface UploadAdminImageInput {
   data: Uint8Array
 }
 
+export interface UploadAccountAvatarInput {
+  filename: string
+  mimeType: string
+  data: Uint8Array
+}
+
 interface AssetsServiceDependencies {
   storage: AssetStorage
   adminLog: AdminLogPort
@@ -68,6 +74,31 @@ export class AssetsService {
         url
       }
     })
+
+    return {
+      url,
+      path: objectPath,
+      filename: safeFilename
+    }
+  }
+
+  async uploadAccountAvatar(session: AuthSessionContext, input: UploadAccountAvatarInput) {
+    assertAdminImageUploadInput(input)
+
+    const safeFilename = sanitizeFilename(input.filename)
+    const extension = getImageExtension(safeFilename)
+    const objectPath = `account/users/avatar/${session.user.id}/${this.clock.today()}/${this.idGenerator.create()}${extension}`
+    const savedObject = await this.storage.savePublicObject({
+      objectPath,
+      data: input.data,
+      contentType: input.mimeType,
+      metadata: {
+        uploadedBy: session.user.id,
+        originalFilename: safeFilename,
+        usage: 'account-avatar'
+      }
+    })
+    const url = `https://storage.googleapis.com/${savedObject.bucketName}/${objectPath}`
 
     return {
       url,

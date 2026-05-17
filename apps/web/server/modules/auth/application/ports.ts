@@ -15,6 +15,12 @@ export interface IdentityAuthenticatedUser {
   email: string
 }
 
+export interface IdentityPasswordUpdateResult {
+  idToken: string
+  uid: string
+  email: string
+}
+
 export interface IdentityUserRecord {
   uid: string
   email?: string | null
@@ -36,6 +42,10 @@ export interface IdentityProvider {
     password: string
   }): Promise<IdentityAuthenticatedUser>
   sendPasswordRecoveryEmail(email: string): Promise<void>
+  updatePasswordWithIdToken(input: {
+    idToken: string
+    password: string
+  }): Promise<IdentityPasswordUpdateResult>
   createSessionCookie(idToken: string, options: { expiresIn: number }): Promise<string>
   verifySessionCookie(sessionCookie: string): Promise<IdentitySessionRecord>
   getUser(uid: string): Promise<IdentityUserRecord>

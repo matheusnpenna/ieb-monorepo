@@ -227,6 +227,51 @@ export type AdminHighlightsResponse = ApiResponse<PlatformHighlight[]>
 export type AdminHighlightResponse = ApiResponse<PlatformHighlight | null>
 export type HomeHighlightsResponse = ApiResponse<PlatformHighlight[]>
 
+export interface AccountProfileInput {
+  fullName: string
+  cpf: string
+  phone: string | null
+  avatarUrl: string | null
+  region: UserRegion
+}
+
+export type AccountProfileResponse = ApiResponse<User | null>
+
+export interface AccountPasswordInput {
+  currentPassword: string
+  newPassword: string
+  newPasswordConfirmation: string
+}
+
+export interface AccountPasswordData {
+  changed: true
+}
+
+export type AccountPasswordResponse = ApiResponse<AccountPasswordData | null>
+
+export type AccountAvatarUploadResponse = ApiResponse<AdminUploadedImageData | null>
+
+export interface AccountAssessmentAttemptItem {
+  id: string
+  courseId: string
+  courseTitle: string
+  courseHref: string | null
+  moduleId: string
+  moduleTitle: string
+  moduleHref: string | null
+  assessmentId: string
+  assessmentTitle: string
+  passingScore: number
+  attemptNumber: number
+  status: AssessmentAttemptStatus
+  score: number | null
+  approved: boolean | null
+  submittedAt: string | null
+  gradedAt: string | null
+}
+
+export type AccountAssessmentAttemptsResponse = ApiResponse<AccountAssessmentAttemptItem[]>
+
 export interface CourseDetailActionLinks {
   startCourseHref: string | null
   continueWatchingHref: string | null

@@ -1,11 +1,33 @@
-import type { AuthSessionResponse, AuthSuccessResponse, RegistrationStatusResponse, UserRegion } from '@ieb/shared'
-import { getQuery, readBody, type H3Event } from 'h3'
+import type {
+  AccountPasswordInput,
+  AccountPasswordResponse,
+  AuthSessionResponse,
+  AuthSuccessResponse,
+  RegistrationStatusResponse,
+  UserRegion
+} from '@ieb/shared'
+import { getQuery, readBody, setResponseStatus, type H3Event } from 'h3'
 import { getAuthModule } from '../../auth.module'
+import { requireAuthSession } from './session'
 import {
   clearAuthSessionCookieForEvent,
   getAuthSessionCookieFromEvent,
   setAuthSessionCookieForEvent
 } from './cookies'
+
+const getErrorStatusCode = (error: unknown) =>
+  typeof error === 'object' && error !== null && 'statusCode' in error && typeof error.statusCode === 'number'
+    ? error.statusCode
+    : 500
+
+const getErrorStatusMessage = (error: unknown, fallbackMessage: string) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'statusMessage' in error &&
+  typeof error.statusMessage === 'string' &&
+  error.statusMessage
+    ? error.statusMessage
+    : fallbackMessage
 
 export const handleLogin = async (event: H3Event): Promise<AuthSuccessResponse> => {
   const body = await readBody<{ email?: string; password?: string }>(event)
@@ -52,6 +74,34 @@ export const handlePasswordRecovery = async (event: H3Event) => {
 
   return {
     message: 'Se o e-mail estiver cadastrado, enviaremos um link de recuperacao em instantes.'
+  }
+}
+
+export const handleAccountPasswordChange = async (event: H3Event): Promise<AccountPasswordResponse> => {
+  try {
+    const session = await requireAuthSession(event)
+    const body = await readBody<AccountPasswordInput>(event)
+    const result = await getAuthModule().accountService.changeAccountPassword(session, {
+      currentPassword: body?.currentPassword || '',
+      newPassword: body?.newPassword || '',
+      newPasswordConfirmation: body?.newPasswordConfirmation || ''
+    })
+
+    await setAuthSessionCookieForEvent(event, result.idToken)
+
+    return {
+      status: 'success',
+      message: 'Senha atualizada com sucesso.',
+      data: {
+        changed: true
+      }
+    }
+  } catch (error) {
+    const statusCode = getErrorStatusCode(error)
+    const statusMessage = getErrorStatusMessage(error, 'Nao foi possivel atualizar a senha.')
+
+    setResponseStatus(event, statusCode)
+    return { status: 'error', messages: [statusMessage], data: null }
   }
 }
 

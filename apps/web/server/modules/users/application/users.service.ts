@@ -1,4 +1,4 @@
-import type { AdminUserInput, AdminUsersData, AuthSessionContext, User } from '@ieb/shared'
+import type { AccountProfileInput, AdminUserInput, AdminUsersData, AuthSessionContext, User } from '@ieb/shared'
 import type { AdminLogPort, UserAuthProvider, UserClock, UserRepository } from './ports'
 import { createUserError } from '../domain/errors'
 import {
@@ -76,6 +76,38 @@ export class UsersService {
     this.assertAdminSession(session)
 
     return await this.getActiveUserById(userId)
+  }
+
+  async getAccountProfile(session: AuthSessionContext): Promise<User> {
+    return await this.getActiveUserById(session.user.id)
+  }
+
+  async updateAccountProfile(session: AuthSessionContext, input: AccountProfileInput): Promise<User> {
+    const existingUser = await this.getActiveUserById(session.user.id)
+    const payload = await this.buildAccountProfilePayload(input, existingUser)
+    const timestamp = this.clock.now()
+    const updatedUser: User = {
+      ...existingUser,
+      fullName: payload.fullName,
+      cpf: payload.cpf,
+      phone: payload.phone,
+      avatarUrl: payload.avatarUrl,
+      region: payload.region,
+      updatedAt: timestamp,
+      updatedBy: session.user.id
+    }
+
+    try {
+      await this.authProvider.updateUser(existingUser.id, {
+        displayName: updatedUser.fullName
+      })
+    } catch (error) {
+      this.mapAuthError(error)
+    }
+
+    await this.repository.save(updatedUser, { merge: true })
+
+    return updatedUser
   }
 
   async createAdminUser(session: AuthSessionContext, input: AdminUserInput): Promise<User> {
@@ -301,6 +333,37 @@ export class UsersService {
       updatedBy: null,
       deletedBy: null,
       password: normalizedPassword || null
+    }
+  }
+
+  private async buildAccountProfilePayload(input: AccountProfileInput, existingUser: User): Promise<AccountProfileInput> {
+    const fullName = typeof input.fullName === 'string' ? input.fullName.trim() : ''
+    const cpf = normalizeCpf(input.cpf)
+
+    if (!fullName) {
+      throw createUserError(400, 'Informe o nome completo.')
+    }
+
+    if (!/^\d{11}$/.test(cpf)) {
+      throw createUserError(400, 'Informe um CPF valido com 11 digitos.')
+    }
+
+    const userWithSameCpf = await this.repository.findActiveByCpf(cpf)
+
+    if (userWithSameCpf && userWithSameCpf.id !== existingUser.id) {
+      throw createUserError(400, 'Ja existe um usuario com este CPF.')
+    }
+
+    if (!['feira-de-santana', 'panambi', 'sertao', 'aluno-externo'].includes(input.region)) {
+      throw createUserError(400, 'Informe uma regiao valida.')
+    }
+
+    return {
+      fullName,
+      cpf,
+      phone: normalizeOptionalText(input.phone),
+      avatarUrl: normalizeOptionalText(input.avatarUrl),
+      region: input.region
     }
   }
 

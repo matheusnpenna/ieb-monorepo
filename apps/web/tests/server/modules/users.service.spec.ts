@@ -20,6 +20,19 @@ const adminSession: AuthSessionContext = {
   issuedAt: '2026-05-08T00:00:00.000Z'
 }
 
+const studentSession: AuthSessionContext = {
+  user: {
+    id: 'uid-1',
+    email: 'student@example.com',
+    fullName: 'Aluno User',
+    role: 'student',
+    status: 'active',
+    region: 'feira-de-santana',
+    avatarUrl: null
+  },
+  issuedAt: '2026-05-08T00:00:00.000Z'
+}
+
 const buildUser = (overrides: Partial<User> & Pick<User, 'id' | 'fullName' | 'cpf' | 'email'>): User => ({
   id: overrides.id,
   role: overrides.role || 'student',
@@ -122,5 +135,44 @@ describe('users service', () => {
 
     expect(result.items.map((user) => user.fullName)).toEqual(['Ana'])
     expect(result.pagination.totalPages).toBe(2)
+  })
+
+  it('updates the authenticated account profile with a normalized CPF', async () => {
+    const { authProvider, service, users } = buildService()
+    users.set('uid-1', buildUser({ id: 'uid-1', fullName: 'Aluno User', cpf: '12345678901', email: 'student@example.com' }))
+
+    const user = await service.updateAccountProfile(studentSession, {
+      fullName: 'Aluno Atualizado',
+      cpf: '987.654.321-00',
+      phone: '(75) 99999-9999',
+      avatarUrl: 'https://example.com/avatar.png',
+      region: 'panambi'
+    })
+
+    expect(user.cpf).toBe('98765432100')
+    expect(user.updatedBy).toBe('uid-1')
+    expect(users.get('uid-1')).toEqual(user)
+    expect(authProvider.updateUser).toHaveBeenCalledWith('uid-1', {
+      displayName: 'Aluno Atualizado'
+    })
+  })
+
+  it('blocks account profile updates with a CPF already used by another active user', async () => {
+    const { service, users } = buildService()
+    users.set('uid-1', buildUser({ id: 'uid-1', fullName: 'Aluno User', cpf: '12345678901', email: 'student@example.com' }))
+    users.set('uid-2', buildUser({ id: 'uid-2', fullName: 'Outro User', cpf: '98765432100', email: 'outro@example.com' }))
+
+    await expect(
+      service.updateAccountProfile(studentSession, {
+        fullName: 'Aluno Atualizado',
+        cpf: '987.654.321-00',
+        phone: null,
+        avatarUrl: null,
+        region: 'panambi'
+      })
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: 'Ja existe um usuario com este CPF.'
+    })
   })
 })

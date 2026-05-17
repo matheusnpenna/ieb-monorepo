@@ -1,4 +1,5 @@
 import type {
+  AccountAssessmentAttemptItem,
   AdminAssessmentAttemptViewItem,
   AdminAssessmentInput,
   Assessment,
@@ -349,6 +350,40 @@ const buildAssessmentAttemptViewItem = (
   }
 }
 
+const buildAccountAssessmentAttemptItem = (
+  attempt: AssessmentAttempt,
+  coursesById: Map<string, Course>,
+  modulesById: Map<string, CourseModule>,
+  assessmentsById: Map<string, Assessment>
+): AccountAssessmentAttemptItem | null => {
+  const course = coursesById.get(attempt.courseId)
+  const module = modulesById.get(attempt.moduleId)
+  const assessment = assessmentsById.get(attempt.assessmentId)
+
+  if (!course || !module || !assessment || course.deletedAt || module.deletedAt || assessment.deletedAt) {
+    return null
+  }
+
+  return {
+    id: attempt.id,
+    courseId: course.id,
+    courseTitle: course.title,
+    courseHref: `/curso/${course.slug}`,
+    moduleId: module.id,
+    moduleTitle: module.title,
+    moduleHref: `/curso/${course.slug}/modulo/${module.slug}`,
+    assessmentId: assessment.id,
+    assessmentTitle: assessment.title,
+    passingScore: assessment.passingScore,
+    attemptNumber: attempt.attemptNumber,
+    status: attempt.status,
+    score: attempt.score,
+    approved: attempt.approved,
+    submittedAt: attempt.submittedAt,
+    gradedAt: attempt.gradedAt
+  }
+}
+
 export const listAdminAssessmentsForManagement = async (
   session: AuthSessionContext,
   filters?: {
@@ -683,6 +718,34 @@ export const submitAssessmentAttemptBySlugs = async (
       submittedAt: attempt.submittedAt
     }
   }
+}
+
+export const listAccountAssessmentAttempts = async (
+  session: AuthSessionContext
+): Promise<AccountAssessmentAttemptItem[]> => {
+  const [attempts, courses, modules, assessments] = await Promise.all([
+    listUserAssessmentAttempts(session.user.id),
+    listAdminCourses(),
+    listAdminModules(),
+    listAdminAssessments()
+  ])
+  const coursesById = new Map(courses.map((course) => [course.id, course] as const))
+  const modulesById = new Map(modules.map((module) => [module.id, module] as const))
+  const assessmentsById = new Map(assessments.map((assessment) => [assessment.id, assessment] as const))
+
+  return attempts
+    .map((attempt) => buildAccountAssessmentAttemptItem(attempt, coursesById, modulesById, assessmentsById))
+    .filter((attempt): attempt is AccountAssessmentAttemptItem => Boolean(attempt))
+    .sort((left, right) => {
+      const rightTimestamp = toTimestampNumber(right.submittedAt || right.gradedAt)
+      const leftTimestamp = toTimestampNumber(left.submittedAt || left.gradedAt)
+
+      if (rightTimestamp !== leftTimestamp) {
+        return rightTimestamp - leftTimestamp
+      }
+
+      return right.attemptNumber - left.attemptNumber
+    })
 }
 
 export const listAdminAssessmentAttemptsForManagement = async (

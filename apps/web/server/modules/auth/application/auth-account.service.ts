@@ -1,4 +1,4 @@
-import type { AuthSessionUser, User } from '@ieb/shared'
+import type { AccountPasswordInput, AuthSessionContext, AuthSessionUser, User } from '@ieb/shared'
 import type { AuthClock, AuthUserRepository, IdentityProvider, RegisterAccountInput } from './ports'
 import { createAuthError } from '../domain/errors'
 import {
@@ -118,6 +118,45 @@ export class AuthAccountService {
       }
 
       throw error
+    }
+  }
+
+  async changeAccountPassword(session: AuthSessionContext, input: AccountPasswordInput) {
+    const currentPassword = input.currentPassword || ''
+    const newPassword = input.newPassword || ''
+    const newPasswordConfirmation = input.newPasswordConfirmation || ''
+
+    if (newPassword !== newPasswordConfirmation) {
+      throw createAuthError(400, 'A confirmacao da nova senha precisa ser igual a senha informada.')
+    }
+
+    if (currentPassword === newPassword) {
+      throw createAuthError(400, 'A nova senha precisa ser diferente da senha atual.')
+    }
+
+    assertEmailAndPassword(session.user.email, currentPassword)
+    assertEmailAndPassword(session.user.email, newPassword)
+
+    const signInResponse = await this.mapIdentityErrors(() =>
+      this.identityProvider.signInWithEmailAndPassword({
+        email: session.user.email,
+        password: currentPassword
+      })
+    )
+
+    if (signInResponse.uid !== session.user.id) {
+      throw createAuthError(403, 'Nao foi possivel confirmar a identidade da conta.')
+    }
+
+    const updateResponse = await this.mapIdentityErrors(() =>
+      this.identityProvider.updatePasswordWithIdToken({
+        idToken: signInResponse.idToken,
+        password: newPassword
+      })
+    )
+
+    return {
+      idToken: updateResponse.idToken
     }
   }
 

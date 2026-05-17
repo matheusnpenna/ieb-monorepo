@@ -33,6 +33,7 @@ export class AssessmentsService {
     assessmentSlug: string,
     answers: Record<string, string | string[]>
   ) => this.backend.submitAssessmentAttemptBySlugs(session, courseSlug, moduleSlug, assessmentSlug, answers)
+  listAccountAssessmentAttempts = (session: AuthSessionContext) => this.backend.listAccountAssessmentAttempts(session)
   listAdminAssessmentAttemptsForManagement = (session: AuthSessionContext) =>
     this.backend.listAdminAssessmentAttemptsForManagement(session)
   updateAdminAssessmentAttemptScoreById = (session: AuthSessionContext, attemptId: string, score: number) =>

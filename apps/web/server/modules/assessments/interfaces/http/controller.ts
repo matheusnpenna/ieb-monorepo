@@ -1,4 +1,5 @@
 import type {
+  AccountAssessmentAttemptsResponse,
   AdminAssessmentAttemptResponse,
   AdminAssessmentAttemptsResponse,
   AdminAssessmentAttemptScoreInput,
@@ -242,6 +243,34 @@ export const handleListAdminAssessmentAttempts = async (
       targetCollection: 'assessmentAttempts',
       targetId: 'list',
       summary: 'Falha ao carregar as respostas de avaliacao no painel administrativo.',
+      statusCode,
+      statusMessage
+    })
+
+    setResponseStatus(event, statusCode)
+    return { status: 'error', messages: [statusMessage], data: [] }
+  }
+}
+
+export const handleListAccountAssessmentAttempts = async (
+  event: H3Event
+): Promise<AccountAssessmentAttemptsResponse> => {
+  let session: AuthSessionContext | null = null
+
+  try {
+    session = await requireAuthSession(event)
+    const attempts = await getAssessmentsModule().service.listAccountAssessmentAttempts(session)
+
+    return { status: 'success', data: attempts }
+  } catch (error) {
+    const statusCode = getErrorStatusCode(error)
+    const statusMessage = getErrorStatusMessage(error, 'Nao foi possivel carregar suas provas.')
+
+    await writeFailureLog(session, {
+      action: 'update',
+      targetCollection: 'assessmentAttempts',
+      targetId: session?.user.id || 'current-user',
+      summary: 'Falha ao carregar as provas do usuario autenticado.',
       statusCode,
       statusMessage
     })

@@ -19,9 +19,9 @@ const links = [
 ]
 
 const accountMenuItems = computed(() => [
-  { id: 'account', label: 'Dados da conta', to: '/home#perfil' },
-  { id: 'exams', label: 'Minhas provas', to: '/home#provas' },
-  { id: 'password', label: 'Trocar a senha', to: '/recurperar-senha' },
+  { id: 'account', label: 'Dados da conta', to: '/conta' },
+  { id: 'exams', label: 'Minhas provas', to: '/minhas-provas' },
+  { id: 'password', label: 'Trocar a senha', to: '/trocar-senha' },
   {
     id: 'logout',
     label: isLoggingOut.value ? 'Saindo...' : 'Sair',

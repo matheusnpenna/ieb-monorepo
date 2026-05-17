@@ -4,6 +4,7 @@ const {
   requireAuthSession,
   getAccessibleModuleAssessmentsBySlugs,
   submitAssessmentAttemptBySlugs,
+  listAccountAssessmentAttempts,
   listAdminAssessmentAttemptsForManagement,
   updateAdminAssessmentAttemptScoreById,
   deleteAdminAssessmentAttemptById,
@@ -16,6 +17,7 @@ const {
   requireAuthSession: vi.fn(),
   getAccessibleModuleAssessmentsBySlugs: vi.fn(),
   submitAssessmentAttemptBySlugs: vi.fn(),
+  listAccountAssessmentAttempts: vi.fn(),
   listAdminAssessmentAttemptsForManagement: vi.fn(),
   updateAdminAssessmentAttemptScoreById: vi.fn(),
   deleteAdminAssessmentAttemptById: vi.fn(),
@@ -38,6 +40,7 @@ vi.mock('../../../server/modules/auth/interfaces/http/session', () => ({
 vi.mock('../../../server/modules/assessments/infrastructure/firebase-assessments.repository', () => ({
   getAccessibleModuleAssessmentsBySlugs,
   submitAssessmentAttemptBySlugs,
+  listAccountAssessmentAttempts,
   listAdminAssessmentAttemptsForManagement,
   updateAdminAssessmentAttemptScoreById,
   deleteAdminAssessmentAttemptById,

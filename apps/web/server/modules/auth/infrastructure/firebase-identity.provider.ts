@@ -14,6 +14,12 @@ interface FirebaseSignInResponse {
   email: string
 }
 
+interface FirebasePasswordUpdateResponse {
+  idToken: string
+  localId: string
+  email: string
+}
+
 interface FirebaseIdentityToolkitError {
   error?: {
     message?: string
@@ -82,6 +88,20 @@ export class FirebaseIdentityProvider implements IdentityProvider {
       requestType: 'PASSWORD_RESET',
       email
     })
+  }
+
+  async updatePasswordWithIdToken(input: { idToken: string; password: string }) {
+    const response = await callIdentityToolkit<FirebasePasswordUpdateResponse>('accounts:update', {
+      idToken: input.idToken,
+      password: input.password,
+      returnSecureToken: true
+    })
+
+    return {
+      idToken: response.idToken,
+      uid: response.localId,
+      email: response.email
+    }
   }
 
   async createSessionCookie(idToken: string, options: { expiresIn: number }) {

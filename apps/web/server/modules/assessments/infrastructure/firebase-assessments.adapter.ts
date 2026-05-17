@@ -4,6 +4,7 @@ import {
   deleteAdminAssessmentBySlug,
   deleteAdminAssessmentAttemptById,
   getAccessibleModuleAssessmentsBySlugs,
+  listAccountAssessmentAttempts,
   getAdminAssessmentBySlug,
   listAdminAssessmentsForManagement,
   listAdminAssessmentAttemptsForManagement,
@@ -20,6 +21,7 @@ export class FirebaseAssessmentsAdapter implements AssessmentsBackendPort {
   deleteAdminAssessmentBySlug = deleteAdminAssessmentBySlug
   getAccessibleModuleAssessmentsBySlugs = getAccessibleModuleAssessmentsBySlugs
   submitAssessmentAttemptBySlugs = submitAssessmentAttemptBySlugs
+  listAccountAssessmentAttempts = listAccountAssessmentAttempts
   listAdminAssessmentAttemptsForManagement = listAdminAssessmentAttemptsForManagement
   updateAdminAssessmentAttemptScoreById = updateAdminAssessmentAttemptScoreById
   deleteAdminAssessmentAttemptById = deleteAdminAssessmentAttemptById

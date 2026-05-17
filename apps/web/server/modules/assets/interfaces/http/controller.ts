@@ -1,4 +1,4 @@
-import type { AdminUploadedImageResponse, AuthSessionContext } from '@ieb/shared'
+import type { AccountAvatarUploadResponse, AdminUploadedImageResponse, AuthSessionContext } from '@ieb/shared'
 import { createError, readMultipartFormData, setResponseStatus, type H3Event } from 'h3'
 import { requireAuthSession } from '../../../auth/interfaces/http/session'
 import { getAssetsModule } from '../../assets.module'
@@ -53,6 +53,33 @@ const writeFailureLog = async (
   }
 }
 
+const writeAccountAvatarFailureLog = async (
+  session: AuthSessionContext | null,
+  input: {
+    statusCode: number
+    statusMessage: string
+  }
+) => {
+  if (!session) {
+    return
+  }
+
+  try {
+    await getAssetsModule().adminLog.write(session, {
+      action: 'update',
+      targetCollection: 'users',
+      targetId: session.user.id,
+      summary: 'Falha ao enviar avatar da propria conta.',
+      metadata: {
+        statusCode: input.statusCode,
+        statusMessage: input.statusMessage
+      }
+    })
+  } catch {
+    // Preserve the original upload error even if log persistence fails.
+  }
+}
+
 export const handleUploadAdminImage = async (event: H3Event): Promise<AdminUploadedImageResponse> => {
   let session: AuthSessionContext | null = null
   let fieldValue = ''
@@ -95,6 +122,50 @@ export const handleUploadAdminImage = async (event: H3Event): Promise<AdminUploa
 
     await writeFailureLog(session, {
       fieldValue,
+      statusCode,
+      statusMessage
+    })
+
+    setResponseStatus(event, statusCode)
+
+    return {
+      status: 'error',
+      messages: [statusMessage],
+      data: null
+    }
+  }
+}
+
+export const handleUploadAccountAvatar = async (event: H3Event): Promise<AccountAvatarUploadResponse> => {
+  let session: AuthSessionContext | null = null
+
+  try {
+    session = await requireAuthSession(event)
+    const multipartParts = await readMultipartFormData(event)
+    const filePart = multipartParts?.find((part) => part.name === 'file')
+
+    if (!filePart?.filename || !filePart.type || !filePart.data) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Selecione uma imagem valida para envio.'
+      })
+    }
+
+    const uploadedImage = await getAssetsModule().service.uploadAccountAvatar(session, {
+      filename: filePart.filename,
+      mimeType: filePart.type,
+      data: filePart.data
+    })
+
+    return {
+      status: 'success',
+      data: uploadedImage
+    }
+  } catch (error) {
+    const statusCode = getErrorStatusCode(error)
+    const statusMessage = getErrorStatusMessage(error, 'Nao foi possivel enviar o avatar.')
+
+    await writeAccountAvatarFailureLog(session, {
       statusCode,
       statusMessage
     })

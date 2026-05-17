@@ -1,4 +1,6 @@
 import type {
+  AccountProfileInput,
+  AccountProfileResponse,
   AdminUserEnrollmentsInput,
   AdminUserEnrollmentsResponse,
   AdminUserInput,
@@ -31,6 +33,14 @@ const normalizeAdminUserInput = (body: AdminUserInput | null | undefined): Admin
   password: body?.password ?? null,
   role: body?.role || 'student',
   status: body?.status || 'active',
+  phone: body?.phone ?? null,
+  avatarUrl: body?.avatarUrl ?? null,
+  region: body?.region || 'aluno-externo'
+})
+
+const normalizeAccountProfileInput = (body: AccountProfileInput | null | undefined): AccountProfileInput => ({
+  fullName: body?.fullName || '',
+  cpf: body?.cpf || '',
   phone: body?.phone ?? null,
   avatarUrl: body?.avatarUrl ?? null,
   region: body?.region || 'aluno-externo'
@@ -177,6 +187,59 @@ export const handleGetAdminUser = async (event: H3Event): Promise<AdminUserRespo
       messages: [statusMessage],
       data: null
     }
+  }
+}
+
+export const handleGetAccountProfile = async (event: H3Event): Promise<AccountProfileResponse> => {
+  let session: AuthSessionContext | null = null
+
+  try {
+    session = await requireAuthSession(event)
+    const user = await getUsersModule().usersService.getAccountProfile(session)
+
+    return { status: 'success', data: user }
+  } catch (error) {
+    const statusCode = getErrorStatusCode(error)
+    const statusMessage = getErrorStatusMessage(error, 'Nao foi possivel carregar os dados da conta.')
+
+    await writeFailureLog(session, {
+      action: 'update',
+      targetCollection: 'users',
+      targetId: session?.user.id || 'current-user',
+      summary: 'Falha ao carregar dados da propria conta.',
+      statusCode,
+      statusMessage
+    })
+
+    setResponseStatus(event, statusCode)
+    return { status: 'error', messages: [statusMessage], data: null }
+  }
+}
+
+export const handleUpdateAccountProfile = async (event: H3Event): Promise<AccountProfileResponse> => {
+  let session: AuthSessionContext | null = null
+
+  try {
+    session = await requireAuthSession(event)
+    const body = await readBody<AccountProfileInput>(event)
+    const user = await getUsersModule().usersService.updateAccountProfile(session, normalizeAccountProfileInput(body))
+
+    return { status: 'success', message: 'Dados da conta atualizados.', data: user }
+  } catch (error) {
+    const statusCode = getErrorStatusCode(error)
+    const statusMessage = getErrorStatusMessage(error, 'Nao foi possivel atualizar os dados da conta.')
+
+    await writeFailureLog(session, {
+      action: 'update',
+      targetCollection: 'users',
+      targetId: session?.user.id || 'current-user',
+      summary: 'Falha ao atualizar dados da propria conta.',
+      statusCode,
+      statusMessage
+    })
+
+    setResponseStatus(event, statusCode)
+    return { status: 'error', messages: [statusMessage], data: null }
   }
 }
 

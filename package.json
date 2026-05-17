@@ -12,6 +12,7 @@
     "preview": "pnpm --filter @ieb/web preview",
     "typecheck": "pnpm --filter @ieb/web typecheck",
     "prepare": "pnpm --filter @ieb/web postinstall",
+    "ieb:web": "pnpm --filter @ieb/web",
     "test": "pnpm --filter @ieb/web test",
     "test:web:watch": "pnpm --filter @ieb/web test:watch",
     "test:web:server": "pnpm --filter @ieb/web test:server",
