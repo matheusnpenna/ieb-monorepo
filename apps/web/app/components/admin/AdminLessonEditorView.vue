@@ -696,7 +696,7 @@ const onDeleteRequest = () => {
         </div>
 
         <div v-if="isAudioContent" class="form-grid lesson-form-grid">
-          <UiField label="URL do audio" required>
+          <UiField label="URL do audio" hint="URL do video, áudio ou pdf" required>
             <UiInput v-model="lessonForm.mediaUrl" placeholder="https://..." />
           </UiField>
 
@@ -715,7 +715,7 @@ const onDeleteRequest = () => {
         </div>
 
         <div v-if="isPdfContent" class="form-grid lesson-form-grid">
-          <UiField label="URL do PDF" required>
+          <UiField label="URL do PDF" hint="URL do video, áudio ou pdf" required>
             <UiInput v-model="lessonForm.mediaUrl" placeholder="https://..." />
           </UiField>
 
