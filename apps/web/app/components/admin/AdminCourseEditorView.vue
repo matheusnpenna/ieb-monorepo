@@ -7,7 +7,7 @@ import type {
   Course
 } from '@ieb/shared'
 import PageIntro from '../base/PageIntro.vue'
-import AdminImageUploadField from './AdminImageUploadField.vue'
+import ImageUploadField from '../ui/ImageUploadField.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
@@ -454,7 +454,7 @@ const onDeleteRequest = () => {
             <UiInput v-model="courseForm.coverImageUrl" placeholder="https://..." />
           </UiField>
 
-          <AdminImageUploadField
+          <ImageUploadField
             label="Upload da capa"
             hint="Envie uma imagem para preencher automaticamente a URL da capa."
             button-label="Enviar capa"
@@ -468,7 +468,7 @@ const onDeleteRequest = () => {
             <UiInput v-model="courseForm.heroImageUrl" placeholder="https://..." />
           </UiField>
 
-          <AdminImageUploadField
+          <ImageUploadField
             label="Upload do hero"
             hint="Envie uma imagem para preencher automaticamente a URL do hero."
             button-label="Enviar hero"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AccountAvatarUploadResponse, AccountProfileInput, AccountProfileResponse, User, UserRegion } from '@ieb/shared'
+import ImageUploadField from '../components/ui/ImageUploadField.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiField from '../components/ui/UiField.vue'
 import UiInput from '../components/ui/UiInput.vue'
@@ -209,27 +210,16 @@ const uploadAvatar = async () => {
             <UiInput v-model="form.avatarUrl" type="url" placeholder="https://..." :disabled="saving || avatarUploadPending" />
           </UiField>
 
-          <UiField label="Enviar avatar" hint="Opcional. Envie JPG, PNG, WEBP, SVG ou GIF de ate 10 MB.">
-            <div class="avatar-upload-stack">
-              <input
-                class="avatar-file-input"
-                type="file"
-                accept="image/*"
-                :disabled="saving || avatarUploadPending"
-                @change="onAvatarFileSelected"
-              >
-              <UiButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                :loading="avatarUploadPending"
-                :disabled="saving || avatarUploadPending || !selectedAvatarFile"
-                @click="uploadAvatar"
-              >
-                Enviar
-              </UiButton>
-            </div>
-          </UiField>
+          <ImageUploadField
+            label="Enviar avatar"
+            hint="Opcional. Envie JPG, PNG, WEBP, SVG ou GIF de ate 10 MB."
+            button-label="Enviar avatar"
+            :loading="avatarUploadPending"
+            :input-disabled="saving || avatarUploadPending"
+            :disabled="saving || avatarUploadPending || !selectedAvatarFile"
+            @select="onAvatarFileSelected"
+            @upload="uploadAvatar"
+          />
 
           <UiField label="Regiao" required>
             <UiSelect v-model="form.region" :disabled="saving">
@@ -315,22 +305,6 @@ const uploadAvatar = async () => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-}
-
-.avatar-upload-stack {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.avatar-file-input {
-  display: block;
-  width: 100%;
-  border: 1px solid var(--ds-border);
-  border-radius: 18px;
-  padding: 0.85rem 1rem;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
-  color: var(--ds-text);
 }
 
 .loading-panel {

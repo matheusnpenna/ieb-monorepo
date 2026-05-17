@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import UiButton from '../ui/UiButton.vue'
-import UiField from '../ui/UiField.vue'
+import UiButton from './UiButton.vue'
+import UiField from './UiField.vue'
 
-const props = defineProps<{
+defineProps<{
   label: string
   hint: string
   buttonLabel: string
   loading?: boolean
   disabled?: boolean
+  inputDisabled?: boolean
   accept?: string
 }>()
 
@@ -22,6 +23,7 @@ const emit = defineEmits<{
     <div class="asset-upload-stack">
       <input
         :accept="accept || 'image/*'"
+        :disabled="inputDisabled"
         class="asset-file-input"
         type="file"
         @change="emit('select', $event)"
@@ -81,6 +83,11 @@ const emit = defineEmits<{
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
   color: var(--ds-text);
   cursor: pointer;
+}
+
+.asset-file-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .upload-icon {

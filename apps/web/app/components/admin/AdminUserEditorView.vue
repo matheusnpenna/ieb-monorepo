@@ -8,7 +8,7 @@ import type {
   UserRegion,
   UserStatus
 } from '@ieb/shared'
-import AdminImageUploadField from './AdminImageUploadField.vue'
+import ImageUploadField from '../ui/ImageUploadField.vue'
 import PageIntro from '../base/PageIntro.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
 import UiButton from '../ui/UiButton.vue'
@@ -507,7 +507,7 @@ const onDeleteRequest = () => {
             <UiInput v-model="userForm.avatarUrl" placeholder="https://..." />
           </UiField>
 
-          <AdminImageUploadField
+          <ImageUploadField
             label="Enviar avatar"
             hint="Envie uma imagem para preencher automaticamente a URL do avatar."
             button-label="Enviar avatar"
