@@ -2,6 +2,8 @@ import type { AdminLessonInput, Lesson } from '@ieb/shared'
 import { createLessonError } from './errors'
 
 const COURSE_SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const LESSON_CONTENT_TYPES = new Set(['video', 'text', 'audio', 'pdf'])
+const VIDEO_PROVIDERS = new Set(['youtube', 'vimeo', 'upload', 'embed'])
 
 export const normalizeOptionalText = (value: string | null | undefined) => {
   const normalizedValue = typeof value === 'string' ? value.trim() : ''
@@ -78,12 +80,28 @@ export const assertAdminLessonPayload = (
     throw createLessonError(400, 'Informe uma ordem valida para a aula.')
   }
 
-  if (!['video', 'text', 'audio'].includes(input.contentType)) {
+  if (!LESSON_CONTENT_TYPES.has(input.contentType)) {
     throw createLessonError(400, 'Informe um tipo de conteudo valido para a aula.')
   }
 
-  if (input.videoProvider && !['youtube', 'vimeo', 'upload', 'embed'].includes(input.videoProvider)) {
+  if (input.videoProvider && !VIDEO_PROVIDERS.has(input.videoProvider)) {
     throw createLessonError(400, 'Informe um provedor de video valido para a aula.')
+  }
+
+  if (input.contentType === 'video' && !input.videoProvider) {
+    throw createLessonError(400, 'Informe o provedor de video da aula.')
+  }
+
+  if (input.contentType !== 'video' && input.videoProvider) {
+    throw createLessonError(400, 'O provedor de video deve ser informado apenas para aulas em video.')
+  }
+
+  if (['video', 'audio', 'pdf'].includes(input.contentType) && !normalizeOptionalText(input.mediaUrl)) {
+    throw createLessonError(400, 'Informe a URL do conteudo da aula.')
+  }
+
+  if (input.contentType === 'text' && !normalizeOptionalText(input.bodyContent)) {
+    throw createLessonError(400, 'Informe o conteudo em texto da aula.')
   }
 
   if (!Number.isFinite(input.durationInMinutes) || input.durationInMinutes < 0) {

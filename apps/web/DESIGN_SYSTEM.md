@@ -45,6 +45,8 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - `UiTextarea`: textarea padrao.
 - `UiSpinner`: indicador de carregamento reutilizavel para estados async.
 - `ImageUploadField`: campo padrao para selecionar arquivo de imagem e disparar upload.
+- `FileUpload`: campo padrao para selecionar arquivos genericos, validar limite de tamanho no front e disparar upload.
+- `PdfViewer`: visualizador de PDF com canvas, paginacao, zoom e eventos de progresso de leitura.
 - `UiDropdownMenu`: menu de conta e acoes contextuais acionado por avatar.
 - `UiConfirmationModal`: modal global de confirmacao para acoes sensiveis.
 - `CourseGrid`: grid editorial de cursos com cards clicaveis e capa destacada.
@@ -89,6 +91,8 @@ Sempre reutilizar estes componentes antes de criar variacoes novas:
 - Todo agrupamento de conteudo deve usar `UiPanel` ou `SurfaceCard`.
 - Estados de carregamento devem preferir `UiSpinner` antes de criar loaders ad hoc.
 - Uploads de imagem devem preferir `ImageUploadField` antes de criar inputs de arquivo ad hoc.
+- Uploads de arquivos nao-imagem devem preferir `FileUpload`, sempre configurando `accept` e `fileSizeLimit`.
+- Visualizacao de PDF deve preferir `PdfViewer` antes de usar iframes ou viewers externos.
 - Menus contextuais de conta ou acoes compactas devem preferir `UiDropdownMenu` antes de criar variacoes novas.
 - Listagens principais de cursos na home ou vitrines semelhantes devem preferir `CourseGrid`.
 - O rodape compartilhado do site e da plataforma deve preferir `AppFooter`.

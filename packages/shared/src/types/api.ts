@@ -193,6 +193,14 @@ export interface AdminUploadedImageData {
 
 export type AdminUploadedImageResponse = ApiResponse<AdminUploadedImageData | null>
 
+export interface AdminUploadedFileData {
+  url: string
+  path: string
+  filename: string
+}
+
+export type AdminUploadedLessonFileResponse = ApiResponse<AdminUploadedFileData | null>
+
 export interface AdminLogsPagination {
   nextCursor: string | null
   pageSize: number

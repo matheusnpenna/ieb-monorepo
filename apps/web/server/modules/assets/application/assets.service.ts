@@ -1,10 +1,13 @@
 import type { AuthSessionContext } from '@ieb/shared'
-import type { AdminImageField } from '../domain/validation'
+import type { AdminImageField, AdminLessonFileKind } from '../domain/validation'
 import {
+  assertAdminLessonFileUploadInput,
   assertAdminImageUploadInput,
   getAdminImageAssetDirectory,
   getAdminImageFieldLabel,
   getAdminImageTargetCollection,
+  getAdminLessonFileAssetDirectory,
+  getAdminLessonFileFieldLabel,
   getImageExtension,
   sanitizeFilename
 } from '../domain/validation'
@@ -19,6 +22,13 @@ export interface UploadAdminImageInput {
 }
 
 export interface UploadAccountAvatarInput {
+  filename: string
+  mimeType: string
+  data: Uint8Array
+}
+
+export interface UploadAdminLessonFileInput {
+  kind: AdminLessonFileKind
   filename: string
   mimeType: string
   data: Uint8Array
@@ -99,6 +109,44 @@ export class AssetsService {
       }
     })
     const url = `https://storage.googleapis.com/${savedObject.bucketName}/${objectPath}`
+
+    return {
+      url,
+      path: objectPath,
+      filename: safeFilename
+    }
+  }
+
+  async uploadAdminLessonFile(session: AuthSessionContext, input: UploadAdminLessonFileInput) {
+    this.assertAdminSession(session)
+    assertAdminLessonFileUploadInput(input)
+
+    const safeFilename = sanitizeFilename(input.filename)
+    const extension = getImageExtension(safeFilename)
+    const objectPath = `admin/${getAdminLessonFileAssetDirectory(input.kind)}/${this.clock.today()}/${this.idGenerator.create()}${extension}`
+    const savedObject = await this.storage.savePublicObject({
+      objectPath,
+      data: input.data,
+      contentType: input.mimeType,
+      metadata: {
+        uploadedBy: session.user.id,
+        originalFilename: safeFilename,
+        lessonFileKind: input.kind
+      }
+    })
+    const url = `https://storage.googleapis.com/${savedObject.bucketName}/${objectPath}`
+    const fieldLabel = getAdminLessonFileFieldLabel(input.kind)
+
+    await this.adminLog.write(session, {
+      action: 'update',
+      targetCollection: 'lessons',
+      targetId: objectPath,
+      summary: `Arquivo de ${fieldLabel} enviado para o storage administrativo.`,
+      metadata: {
+        kind: input.kind,
+        url
+      }
+    })
 
     return {
       url,

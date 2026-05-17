@@ -24,6 +24,10 @@ const formatContentType = (value: Lesson['contentType']) => {
     return 'Texto'
   }
 
+  if (value === 'pdf') {
+    return 'PDF'
+  }
+
   return 'Video'
 }
 

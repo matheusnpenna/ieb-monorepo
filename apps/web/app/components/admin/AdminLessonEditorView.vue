@@ -4,10 +4,12 @@ import type {
   AdminLessonInput,
   AdminLessonResponse,
   AdminLessonsResponse,
-  AdminModulesResponse
+  AdminModulesResponse,
+  AdminUploadedLessonFileResponse
 } from '@ieb/shared'
 import PageIntro from '../base/PageIntro.vue'
 import SurfaceCard from '../base/SurfaceCard.vue'
+import FileUpload from '../ui/FileUpload.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
 import UiInput from '../ui/UiInput.vue'
@@ -18,6 +20,7 @@ import { useConfirmationModal } from '../../composables/use-confirmation-modal'
 import { getRequestErrorMessage } from '../../lib/utils'
 
 type FeedbackTone = 'success' | 'error'
+type LessonFileKind = 'audio' | 'pdf'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -30,8 +33,12 @@ const { openConfirmationModal } = useConfirmationModal()
 const contentTypeOptions = [
   { value: 'video', label: 'Video' },
   { value: 'text', label: 'Texto' },
-  { value: 'audio', label: 'Audio' }
+  { value: 'audio', label: 'Audio' },
+  { value: 'pdf', label: 'PDF' }
 ] as const
+
+const AUDIO_FILE_SIZE_LIMIT = 50 * 1024 * 1024
+const PDF_FILE_SIZE_LIMIT = 10 * 1024 * 1024
 
 const videoProviderOptions = [
   { value: 'youtube', label: 'YouTube' },
@@ -183,6 +190,11 @@ const submitPending = ref(false)
 const deletePending = ref(false)
 const feedbackMessage = ref('')
 const feedbackTone = ref<FeedbackTone>('success')
+const lessonFileUploadPending = ref<LessonFileKind | null>(null)
+const selectedLessonFiles = ref<Record<LessonFileKind, File | null>>({
+  audio: null,
+  pdf: null
+})
 
 const isEditing = computed(() => props.mode === 'edit')
 const courses = computed(() => {
@@ -275,6 +287,8 @@ const manualCompletionValue = computed({
 })
 const isVideoContent = computed(() => lessonForm.value.contentType === 'video')
 const isTextContent = computed(() => lessonForm.value.contentType === 'text')
+const isAudioContent = computed(() => lessonForm.value.contentType === 'audio')
+const isPdfContent = computed(() => lessonForm.value.contentType === 'pdf')
 
 watch(
   currentLesson,
@@ -354,10 +368,12 @@ watch(
 
 watch(
   () => lessonForm.value.contentType,
-  (contentType) => {
+  (contentType, previousContentType) => {
+    selectedLessonFiles.value.audio = null
+    selectedLessonFiles.value.pdf = null
+
     if (contentType !== 'video') {
       lessonForm.value.videoProvider = null
-      lessonForm.value.mediaUrl = null
       lessonForm.value.thumbnailUrl = null
     } else if (!lessonForm.value.videoProvider) {
       lessonForm.value.videoProvider = 'youtube'
@@ -365,6 +381,10 @@ watch(
 
     if (contentType !== 'text') {
       lessonForm.value.bodyContent = null
+    }
+
+    if (previousContentType && contentType !== previousContentType) {
+      lessonForm.value.mediaUrl = null
     }
   }
 )
@@ -407,8 +427,50 @@ const buildPayload = (): AdminLessonInput => ({
   allowManualCompletion: Boolean(lessonForm.value.allowManualCompletion)
 })
 
+const onLessonFileSelected = (kind: LessonFileKind, event: Event) => {
+  const input = event.target as HTMLInputElement
+  selectedLessonFiles.value[kind] = input.files?.[0] || null
+}
+
+const uploadLessonFile = async (kind: LessonFileKind) => {
+  const selectedFile = selectedLessonFiles.value[kind]
+
+  if (!selectedFile || lessonFileUploadPending.value) {
+    return
+  }
+
+  lessonFileUploadPending.value = kind
+  feedbackMessage.value = ''
+
+  try {
+    const formData = new FormData()
+    formData.append('kind', kind)
+    formData.append('file', selectedFile)
+
+    const response = await $fetch<AdminUploadedLessonFileResponse>('/api/admin/uploads/lesson-files', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    })
+
+    if (response.status !== 'success' || !response.data) {
+      throw new Error('Nao foi possivel enviar o arquivo da aula.')
+    }
+
+    lessonForm.value.mediaUrl = response.data.url
+    selectedLessonFiles.value[kind] = null
+    feedbackTone.value = 'success'
+    feedbackMessage.value = kind === 'audio' ? 'Audio enviado com sucesso.' : 'PDF enviado com sucesso.'
+  } catch (error) {
+    feedbackTone.value = 'error'
+    feedbackMessage.value = getRequestErrorMessage(error, 'Nao foi possivel enviar o arquivo da aula.')
+  } finally {
+    lessonFileUploadPending.value = null
+  }
+}
+
 const onSubmit = async () => {
-  if (submitPending.value || (!isEditing.value && !canCreateLesson.value)) {
+  if (submitPending.value || lessonFileUploadPending.value || (!isEditing.value && !canCreateLesson.value)) {
     return
   }
 
@@ -562,17 +624,31 @@ const onDeleteRequest = () => {
             </UiSelect>
           </UiField>
         </div>
+        
+        <div class="form-grid lesson-form-grid">
+          <UiField 
+            label="Titulo" 
+            required
+            hint="O titulo da aula e utilizado para gerar o slug e organizar a navegacao do conteudo."
+          >
+            <UiInput v-model="lessonForm.title" placeholder="Ex.: Introducao a Teologia" />
+          </UiField>
+  
+          <UiField
+            label="Slug"
+            required
+            hint="Gerado automaticamente a partir do titulo. Se ja existir, o sistema adiciona um hash de 4 digitos no inicio."
+          >
+            <UiInput :model-value="lessonForm.slug" disabled />
+          </UiField>
+        </div>
 
-        <UiField label="Titulo" required>
-          <UiInput v-model="lessonForm.title" placeholder="Ex.: Introducao a Teologia" />
-        </UiField>
-
-        <UiField
-          label="Slug"
-          required
-          hint="Gerado automaticamente a partir do titulo. Se ja existir, o sistema adiciona um hash de 4 digitos no inicio."
-        >
-          <UiInput :model-value="lessonForm.slug" disabled />
+        <UiField label="Descricao" required>
+          <UiTextarea
+            v-model="lessonForm.description"
+            :rows="4"
+            placeholder="Explique o objetivo da aula e o que o aluno deve aprender."
+          />
         </UiField>
 
         <div class="form-grid lesson-form-grid">
@@ -580,7 +656,7 @@ const onDeleteRequest = () => {
             <UiInput v-model="lessonForm.order" type="number" min="1" />
           </UiField>
 
-          <UiField label="Duracao em minutos" required>
+          <UiField label="Duracao em minutos" required hint="A duracao e utilizada para calcular o progresso do aluno no modulo e curso.">
             <UiInput v-model="lessonForm.durationInMinutes" type="number" min="0" />
           </UiField>
 
@@ -601,14 +677,6 @@ const onDeleteRequest = () => {
           </UiField>
         </div>
 
-        <UiField label="Descricao" required>
-          <UiTextarea
-            v-model="lessonForm.description"
-            :rows="4"
-            placeholder="Explique o objetivo da aula e o que o aluno deve aprender."
-          />
-        </UiField>
-
         <div v-if="isVideoContent" class="form-grid lesson-form-grid">
           <UiField label="Provedor de video" required>
             <UiSelect v-model="lessonForm.videoProvider">
@@ -618,13 +686,51 @@ const onDeleteRequest = () => {
             </UiSelect>
           </UiField>
 
-          <UiField label="URL do video" required>
+          <UiField label="URL do video" required hint="URL do video, áudio ou pdf">
             <UiInput v-model="lessonForm.mediaUrl" placeholder="https://..." />
           </UiField>
 
           <UiField label="URL da miniatura" hint="Opcional para representacao visual da aula.">
             <UiInput v-model="lessonForm.thumbnailUrl" placeholder="https://..." />
           </UiField>
+        </div>
+
+        <div v-if="isAudioContent" class="form-grid lesson-form-grid">
+          <UiField label="URL do audio" required>
+            <UiInput v-model="lessonForm.mediaUrl" placeholder="https://..." />
+          </UiField>
+
+          <FileUpload
+            label="Upload do audio"
+            hint="Opcional. Envie um arquivo de audio de ate 50 MB para preencher a URL automaticamente."
+            button-label="Enviar audio"
+            accept="audio/*"
+            :file-size-limit="AUDIO_FILE_SIZE_LIMIT"
+            :loading="lessonFileUploadPending === 'audio'"
+            :input-disabled="submitPending || deletePending || lessonFileUploadPending !== null"
+            :disabled="submitPending || deletePending || lessonFileUploadPending !== null || !selectedLessonFiles.audio"
+            @select="onLessonFileSelected('audio', $event)"
+            @upload="uploadLessonFile('audio')"
+          />
+        </div>
+
+        <div v-if="isPdfContent" class="form-grid lesson-form-grid">
+          <UiField label="URL do PDF" required>
+            <UiInput v-model="lessonForm.mediaUrl" placeholder="https://..." />
+          </UiField>
+
+          <FileUpload
+            label="Upload do PDF"
+            hint="Opcional. Envie um arquivo PDF de ate 10 MB para preencher a URL automaticamente."
+            button-label="Enviar PDF"
+            accept="application/pdf"
+            :file-size-limit="PDF_FILE_SIZE_LIMIT"
+            :loading="lessonFileUploadPending === 'pdf'"
+            :input-disabled="submitPending || deletePending || lessonFileUploadPending !== null"
+            :disabled="submitPending || deletePending || lessonFileUploadPending !== null || !selectedLessonFiles.pdf"
+            @select="onLessonFileSelected('pdf', $event)"
+            @upload="uploadLessonFile('pdf')"
+          />
         </div>
 
         <UiField v-if="isTextContent" label="Conteudo em texto" required>
@@ -641,10 +747,22 @@ const onDeleteRequest = () => {
         </div>
 
         <div class="form-actions">
-          <UiButton type="submit" variant="success" size="lg" :loading="submitPending">
+          <UiButton
+            type="submit"
+            variant="success"
+            size="lg"
+            :loading="submitPending"
+            :disabled="lessonFileUploadPending !== null"
+          >
             {{ submitLabel }}
           </UiButton>
-          <UiButton to="/admin/aulas" type="button" variant="ghost" size="lg" :disabled="submitPending || deletePending">
+          <UiButton
+            to="/admin/aulas"
+            type="button"
+            variant="ghost"
+            size="lg"
+            :disabled="submitPending || deletePending || lessonFileUploadPending !== null"
+          >
             Voltar para aulas
           </UiButton>
           <UiButton
@@ -653,7 +771,7 @@ const onDeleteRequest = () => {
             variant="ghost"
             textColor="accent"
             size="lg"
-            :disabled="submitPending || deletePending"
+            :disabled="submitPending || deletePending || lessonFileUploadPending !== null"
             @click="onDeleteRequest"
           >
             Excluir aula

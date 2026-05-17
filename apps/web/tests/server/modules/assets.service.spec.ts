@@ -73,4 +73,34 @@ describe('assets service', () => {
       })
     )
   })
+
+  it('uploads an admin lesson file through storage and log ports', async () => {
+    const { adminLog, service, storage } = buildService()
+
+    const uploadedFile = await service.uploadAdminLessonFile(adminSession, {
+      kind: 'pdf',
+      filename: ' Apostila Aula 1.PDF ',
+      mimeType: 'application/pdf',
+      data: Buffer.from('pdf')
+    })
+
+    expect(uploadedFile).toEqual({
+      url: 'https://storage.googleapis.com/bucket/admin/lessons/pdf/2026-05-08/asset-1.pdf',
+      path: 'admin/lessons/pdf/2026-05-08/asset-1.pdf',
+      filename: 'apostila-aula-1.pdf'
+    })
+    expect(storage.savePublicObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        objectPath: uploadedFile.path,
+        contentType: 'application/pdf'
+      })
+    )
+    expect(adminLog.write).toHaveBeenCalledWith(
+      adminSession,
+      expect.objectContaining({
+        targetCollection: 'lessons',
+        targetId: uploadedFile.path
+      })
+    )
+  })
 })
