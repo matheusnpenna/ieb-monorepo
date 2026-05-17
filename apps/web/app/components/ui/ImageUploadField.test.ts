@@ -47,4 +47,27 @@ describe('ImageUploadField', () => {
     expect(wrapper.get('input[type="file"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('button').attributes('disabled')).toBeDefined()
   })
+
+  it('rejects files above the configured file size limit', async () => {
+    const wrapper = mount(ImageUploadField, {
+      props: {
+        label: 'Enviar avatar',
+        hint: 'Selecione uma imagem.',
+        buttonLabel: 'Enviar avatar',
+        fileSizeLimit: 3
+      }
+    })
+    const input = wrapper.get('input[type="file"]').element as HTMLInputElement
+    const oversizedFile = new File(['avatar'], 'avatar.png', { type: 'image/png' })
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [oversizedFile]
+    })
+
+    await wrapper.get('input[type="file"]').trigger('change')
+
+    expect(wrapper.text()).toContain('A imagem precisa ter ate 1 KB.')
+    expect(wrapper.emitted('select')).toHaveLength(1)
+  })
 })

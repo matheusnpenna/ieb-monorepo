@@ -19,6 +19,7 @@ useSeoMeta({
 })
 
 const { fetchSession } = useAuthSession()
+const AVATAR_FILE_SIZE_LIMIT = 3 * 1024 * 1024
 
 const regionOptions: Array<{ value: UserRegion; label: string }> = [
   { value: 'feira-de-santana', label: 'Feira de Santana' },
@@ -212,8 +213,9 @@ const uploadAvatar = async () => {
 
           <ImageUploadField
             label="Enviar avatar"
-            hint="Opcional. Envie JPG, PNG, WEBP, SVG ou GIF de ate 10 MB."
+            hint="Opcional. Envie JPG, PNG, WEBP, SVG ou GIF de ate 3 MB."
             button-label="Enviar avatar"
+            :file-size-limit="AVATAR_FILE_SIZE_LIMIT"
             :loading="avatarUploadPending"
             :input-disabled="saving || avatarUploadPending"
             :disabled="saving || avatarUploadPending || !selectedAvatarFile"

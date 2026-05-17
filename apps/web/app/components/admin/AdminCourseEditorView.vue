@@ -26,6 +26,7 @@ const props = defineProps<{
   courseSlug?: string
 }>()
 
+const IMAGE_FILE_SIZE_LIMIT = 3 * 1024 * 1024
 const route = useRoute()
 const { openConfirmationModal } = useConfirmationModal()
 
@@ -458,6 +459,7 @@ const onDeleteRequest = () => {
             label="Upload da capa"
             hint="Envie uma imagem para preencher automaticamente a URL da capa."
             button-label="Enviar capa"
+            :file-size-limit="IMAGE_FILE_SIZE_LIMIT"
             :loading="assetUploadPending === 'cover'"
             :disabled="!selectedFiles.cover"
             @select="onFileSelected('cover', $event)"
@@ -472,6 +474,7 @@ const onDeleteRequest = () => {
             label="Upload do hero"
             hint="Envie uma imagem para preencher automaticamente a URL do hero."
             button-label="Enviar hero"
+            :file-size-limit="IMAGE_FILE_SIZE_LIMIT"
             :loading="assetUploadPending === 'hero'"
             :disabled="!selectedFiles.hero"
             @select="onFileSelected('hero', $event)"

@@ -28,6 +28,7 @@ const props = defineProps<{
   userId?: string
 }>()
 
+const IMAGE_FILE_SIZE_LIMIT = 3 * 1024 * 1024
 const route = useRoute()
 const { openConfirmationModal } = useConfirmationModal()
 
@@ -511,6 +512,7 @@ const onDeleteRequest = () => {
             label="Enviar avatar"
             hint="Envie uma imagem para preencher automaticamente a URL do avatar."
             button-label="Enviar avatar"
+            :file-size-limit="IMAGE_FILE_SIZE_LIMIT"
             :loading="assetUploadPending === 'avatar'"
             :disabled="submitPending || deletePending || !selectedFiles.avatar"
             @select="onFileSelected('avatar', $event)"

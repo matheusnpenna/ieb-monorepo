@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import UiButton from './UiButton.vue'
 import UiField from './UiField.vue'
 
-defineProps<{
+const props = defineProps<{
   label: string
   hint: string
   buttonLabel: string
@@ -10,23 +11,54 @@ defineProps<{
   disabled?: boolean
   inputDisabled?: boolean
   accept?: string
+  fileSizeLimit?: number
 }>()
 
 const emit = defineEmits<{
   select: [event: Event]
   upload: []
 }>()
+
+const fileSizeError = ref('')
+const formattedFileSizeLimit = computed(() => {
+  if (!props.fileSizeLimit) {
+    return ''
+  }
+
+  if (props.fileSizeLimit < 1024 * 1024) {
+    return `${Math.max(1, Math.ceil(props.fileSizeLimit / 1024))} KB`
+  }
+
+  const megabytes = props.fileSizeLimit / (1024 * 1024)
+
+  return Number.isInteger(megabytes) ? `${megabytes} MB` : `${megabytes.toFixed(1)} MB`
+})
+
+const onFileSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const selectedFile = input.files?.[0] || null
+
+  if (selectedFile && props.fileSizeLimit && selectedFile.size > props.fileSizeLimit) {
+    fileSizeError.value = `A imagem precisa ter ate ${formattedFileSizeLimit.value}.`
+    input.value = ''
+    emit('select', event)
+    return
+  }
+
+  fileSizeError.value = ''
+  emit('select', event)
+}
 </script>
 
 <template>
-  <UiField :label="label" :hint="hint">
+  <UiField :label="label" :hint="hint" :error="fileSizeError">
     <div class="asset-upload-stack">
       <input
         :accept="accept || 'image/*'"
         :disabled="inputDisabled"
         class="asset-file-input"
         type="file"
-        @change="emit('select', $event)"
+        @change="onFileSelected"
       >
       <UiButton
         type="button"
