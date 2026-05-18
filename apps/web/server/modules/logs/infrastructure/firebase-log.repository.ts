@@ -4,8 +4,8 @@ import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase
 
 const toAdminLogDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<AdminActivityLog, 'id'>)
+    ...(snapshot.data() as Omit<AdminActivityLog, 'id'>),
+    id: snapshot.id
   }) as AdminActivityLog
 
 export class FirebaseLogRepository implements LogRepository {

@@ -50,32 +50,32 @@ const toTimestampNumber = (timestamp: string | null | undefined) => {
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Course, 'id'>)
+    ...(snapshot.data() as Omit<Course, 'id'>),
+    id: snapshot.id
   }) as Course
 
 const toModuleDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<CourseModule, 'id'>)
+    ...(snapshot.data() as Omit<CourseModule, 'id'>),
+    id: snapshot.id
   }) as CourseModule
 
 const toAssessmentDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Assessment, 'id'>)
+    ...(snapshot.data() as Omit<Assessment, 'id'>),
+    id: snapshot.id
   }) as Assessment
 
 const toAssessmentAttemptDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<AssessmentAttempt, 'id'>)
+    ...(snapshot.data() as Omit<AssessmentAttempt, 'id'>),
+    id: snapshot.id
   }) as AssessmentAttempt
 
 const toUserDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<User, 'id'>)
+    ...(snapshot.data() as Omit<User, 'id'>),
+    id: snapshot.id
   }) as User
 
 const listAdminCourses = async () => {
@@ -136,14 +136,17 @@ const getCourseById = async (courseId: string) => {
 }
 
 const getCourseBySlug = async (courseSlug: string) => {
-  const courseById = await getCourseById(courseSlug)
-
-  if (courseById) {
-    return courseById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('courses').where('slug', '==', courseSlug).get()
-  const legacyCourseSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(courseSlug)
+  const collection = getFirebaseAdminCollection('courses')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toCourseDocument(document).slug === normalizedSlug)
+        : []
+  const legacyCourseSnapshot = slugDocuments.find((document) => {
     const course = toCourseDocument(document)
 
     return !course.deletedAt
@@ -163,14 +166,17 @@ const getModuleById = async (moduleId: string) => {
 }
 
 const getModuleBySlug = async (moduleSlug: string) => {
-  const moduleById = await getModuleById(moduleSlug)
-
-  if (moduleById) {
-    return moduleById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('modules').where('slug', '==', moduleSlug).get()
-  const legacyModuleSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(moduleSlug)
+  const collection = getFirebaseAdminCollection('modules')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toModuleDocument(document).slug === normalizedSlug)
+        : []
+  const legacyModuleSnapshot = slugDocuments.find((document) => {
     const module = toModuleDocument(document)
 
     return !module.deletedAt
@@ -190,14 +196,17 @@ const getAssessmentById = async (assessmentId: string) => {
 }
 
 const getAssessmentBySlug = async (assessmentSlug: string) => {
-  const assessmentById = await getAssessmentById(assessmentSlug)
-
-  if (assessmentById) {
-    return assessmentById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('assessments').where('slug', '==', assessmentSlug).get()
-  const legacyAssessmentSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(assessmentSlug)
+  const collection = getFirebaseAdminCollection('assessments')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toAssessmentDocument(document).slug === normalizedSlug)
+        : []
+  const legacyAssessmentSnapshot = slugDocuments.find((document) => {
     const assessment = toAssessmentDocument(document)
 
     return !assessment.deletedAt
@@ -283,7 +292,7 @@ const resolveUniqueAdminAssessmentSlug = async (input: AdminAssessmentInput) => 
     throw createHttpError(400, 'Informe um slug de avaliacao valido.')
   }
 
-  const existingBaseAssessment = await getAssessmentById(baseSlug)
+  const existingBaseAssessment = await getAssessmentBySlug(baseSlug)
 
   if (!existingBaseAssessment) {
     return baseSlug
@@ -292,7 +301,7 @@ const resolveUniqueAdminAssessmentSlug = async (input: AdminAssessmentInput) => 
   for (let salt = 0; salt < 50; salt += 1) {
     const hash = createFourDigitSlugHash(baseSlug, salt)
     const nextSlug = `${hash}-${baseSlug}`
-    const existingAssessment = await getAssessmentById(nextSlug)
+    const existingAssessment = await getAssessmentBySlug(nextSlug)
 
     if (!existingAssessment) {
       return nextSlug
@@ -398,45 +407,13 @@ export const listAdminAssessmentsForManagement = async (
   const assessments = await listAdminAssessments()
   const requestedCourseId = typeof filters?.courseId === 'string' ? filters.courseId.trim() : ''
   const requestedModuleId = typeof filters?.moduleId === 'string' ? filters.moduleId.trim() : ''
-  const normalizedCourseSlug = requestedCourseId ? normalizeCourseSlug(requestedCourseId) : ''
-  const normalizedModuleSlug = requestedModuleId ? normalizeCourseSlug(requestedModuleId) : ''
-  const [resolvedCourse, resolvedModule] = await Promise.all([
-    requestedCourseId
-      ? (async () => {
-          const courseById = await getCourseById(requestedCourseId)
-
-          if (courseById) {
-            return courseById
-          }
-
-          return normalizedCourseSlug ? await getCourseBySlug(normalizedCourseSlug) : null
-        })()
-      : Promise.resolve(null),
-    requestedModuleId
-      ? (async () => {
-          const moduleById = await getModuleById(requestedModuleId)
-
-          if (moduleById) {
-            return moduleById
-          }
-
-          return normalizedModuleSlug ? await getModuleBySlug(normalizedModuleSlug) : null
-        })()
-      : Promise.resolve(null)
-  ])
-  const acceptedCourseIds = new Set(
-    [requestedCourseId, normalizedCourseSlug, resolvedCourse?.id || '', resolvedCourse?.slug || ''].filter(Boolean)
-  )
-  const acceptedModuleIds = new Set(
-    [requestedModuleId, normalizedModuleSlug, resolvedModule?.id || '', resolvedModule?.slug || ''].filter(Boolean)
-  )
 
   return assessments.filter((assessment) => {
-    if (acceptedCourseIds.size > 0 && !acceptedCourseIds.has(assessment.courseId)) {
+    if (requestedCourseId && assessment.courseId !== requestedCourseId) {
       return false
     }
 
-    if (acceptedModuleIds.size > 0 && !acceptedModuleIds.has(assessment.moduleId)) {
+    if (requestedModuleId && assessment.moduleId !== requestedModuleId) {
       return false
     }
 
@@ -469,18 +446,18 @@ export const createAdminAssessment = async (session: AuthSessionContext, input: 
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  const normalizedCourseId = normalizeCourseSlug(input.courseId)
-  const normalizedModuleId = normalizeCourseSlug(input.moduleId)
+  const requestedCourseId = input.courseId.trim()
+  const requestedModuleId = input.moduleId.trim()
 
-  if (!normalizedCourseId) {
+  if (!requestedCourseId) {
     throw createHttpError(400, 'Selecione um curso valido para a avaliacao.')
   }
 
-  if (!normalizedModuleId) {
+  if (!requestedModuleId) {
     throw createHttpError(400, 'Selecione um modulo valido para a avaliacao.')
   }
 
-  const [course, module] = await Promise.all([getCourseById(normalizedCourseId), getModuleById(normalizedModuleId)])
+  const [course, module] = await Promise.all([getCourseById(requestedCourseId), getModuleById(requestedModuleId)])
 
   if (!course || course.deletedAt) {
     throw createHttpError(404, 'Curso nao encontrado para vincular a avaliacao.')

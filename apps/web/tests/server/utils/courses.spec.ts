@@ -205,6 +205,26 @@ const createDocumentSnapshot = <TDocument extends { id: string }>(document: TDoc
   }
 })
 
+const createReadonlyCollection = <TDocument extends { id: string }>(documents: TDocument[]) => ({
+  doc: vi.fn((documentId?: string) => ({
+    get: vi.fn().mockResolvedValue(
+      documentId && documents.some((document) => document.id === documentId)
+        ? createDocumentSnapshot(documents.find((document) => document.id === documentId)!)
+        : { exists: false }
+    )
+  })),
+  get: vi.fn().mockResolvedValue({
+    docs: documents.map(createDocumentSnapshot)
+  }),
+  where: vi.fn((fieldName: string, _operator: string, fieldValue: unknown) => ({
+    get: vi.fn().mockResolvedValue({
+      docs: documents
+        .filter((document) => (document as Record<string, unknown>)[fieldName] === fieldValue)
+        .map(createDocumentSnapshot)
+    })
+  }))
+})
+
 describe('listAccessibleCourses', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -433,6 +453,16 @@ describe('admin course management', () => {
 
               return await courseSet(payload)
             })
+          })),
+          get: vi.fn().mockResolvedValue({
+            docs: [...storedCourses.values()].map(createDocumentSnapshot)
+          }),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: unknown) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: [...storedCourses.values()]
+                .filter((course) => (course as Record<string, unknown>)[fieldName] === fieldValue)
+                .map(createDocumentSnapshot)
+            })
           }))
         }
       }
@@ -532,6 +562,16 @@ describe('admin course management', () => {
               if (documentId) {
                 storedCourses.set(documentId, payload as Course)
               }
+            })
+          })),
+          get: vi.fn().mockResolvedValue({
+            docs: [...storedCourses.values()].map(createDocumentSnapshot)
+          }),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: unknown) => ({
+            get: vi.fn().mockResolvedValue({
+              docs: [...storedCourses.values()]
+                .filter((course) => (course as Record<string, unknown>)[fieldName] === fieldValue)
+                .map(createDocumentSnapshot)
             })
           }))
         }
@@ -817,10 +857,13 @@ describe('admin module management', () => {
 
       if (collectionName === 'modules') {
         return {
-          where: vi.fn((_fieldName: string, _operator: string, courseId: string) => ({
+          get: vi.fn().mockResolvedValue({
+            docs: [...storedModules.values()].map(createDocumentSnapshot)
+          }),
+          where: vi.fn((fieldName: string, _operator: string, fieldValue: unknown) => ({
             get: vi.fn().mockResolvedValue({
               docs: [...storedModules.values()]
-                .filter((module) => module.courseId === courseId)
+                .filter((module) => (module as Record<string, unknown>)[fieldName] === fieldValue)
                 .map(createDocumentSnapshot)
             })
           })),
@@ -963,7 +1006,7 @@ describe('admin lesson management', () => {
     expect(lessons.map((lesson) => lesson.slug)).toEqual(['aula-a', 'aula-b'])
   })
 
-  it('filters lessons by selected course and module even when legacy relations use slugs', async () => {
+  it('filters lessons by selected course and module ids', async () => {
     const legacyCourse = buildCourse({
       id: 'course-doc-1',
       title: 'Teologia Basica',
@@ -977,8 +1020,8 @@ describe('admin lesson management', () => {
     })
     const legacyLesson = buildLesson({
       id: 'lesson-doc-1',
-      courseId: legacyCourse.slug,
-      moduleId: legacyModule.slug,
+      courseId: legacyCourse.id,
+      moduleId: legacyModule.id,
       title: 'Introducao a Teologia',
       slug: 'introducao-a-teologia'
     })
@@ -1366,7 +1409,7 @@ describe('admin assessment management', () => {
     expect(assessments.map((assessment) => assessment.slug)).toEqual(['prova-a'])
   })
 
-  it('lists admin assessments for management when filters use slugs and records use document ids', async () => {
+  it('lists admin assessments for management when filters use document ids', async () => {
     const legacyCourse = buildCourse({
       id: 'curso-doc-1',
       title: 'Curso 1',
@@ -1436,8 +1479,8 @@ describe('admin assessment management', () => {
     })
 
     const assessments = await listAdminAssessmentsForManagement(adminSession, {
-      courseId: legacyCourse.slug,
-      moduleId: legacyModule.slug
+      courseId: legacyCourse.id,
+      moduleId: legacyModule.id
     })
 
     expect(assessments.map((assessment) => assessment.slug)).toEqual(['prova-a'])
@@ -1672,11 +1715,7 @@ describe('getAccessibleModuleAssessmentsBySlugs', () => {
 
     getFirebaseAdminCollection.mockImplementation((collectionName: string) => {
       if (collectionName === 'courses') {
-        return {
-          doc: vi.fn(() => ({
-            get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-          }))
-        }
+        return createReadonlyCollection([course])
       }
 
       if (collectionName === 'modules') {
@@ -1807,13 +1846,7 @@ describe('getHomeMetrics', () => {
       slug: 'liderando-equipes'
     })
 
-    const coursesCollection = {
-      doc: vi.fn((courseId: string) => ({
-        get: vi.fn().mockResolvedValue(
-          createDocumentSnapshot(courseId === courseOne.id ? courseOne : courseTwo)
-        )
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([courseOne, courseTwo])
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
         get: vi.fn().mockResolvedValue({
@@ -1975,11 +2008,7 @@ describe('getAccessibleCourseDetailBySlug', () => {
       order: 1
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
 
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
@@ -2082,11 +2111,7 @@ describe('getAccessibleCourseDetailBySlug', () => {
       slug: 'curso-de-teologia-basica'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
 
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
@@ -2184,11 +2209,7 @@ describe('getAccessibleModuleDetailBySlugs', () => {
       slug: 'avaliacao-secundaria'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
 
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
@@ -2336,11 +2357,7 @@ describe('getAccessibleModuleDetailBySlugs', () => {
       slug: 'fundamentos'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
 
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
@@ -2445,11 +2462,7 @@ describe('markLessonAsCompletedBySlugs', () => {
       durationInMinutes: 18
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
 
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
@@ -2598,11 +2611,7 @@ describe('getAccessibleLessonDetailBySlugs', () => {
       slug: 'aula-03'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
         get: vi.fn().mockResolvedValue({
@@ -2730,11 +2739,7 @@ describe('getAccessibleLessonDetailBySlugs', () => {
       slug: 'aula-03'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue(createDocumentSnapshot(course))
-      }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
         get: vi.fn().mockResolvedValue({
@@ -2857,9 +2862,7 @@ describe('updateLessonProgressBySlugs', () => {
       completionRate: 20
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({ get: vi.fn().mockResolvedValue(createDocumentSnapshot(course)) }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
         get: vi.fn().mockResolvedValue({
@@ -2974,9 +2977,7 @@ describe('updateLessonProgressBySlugs', () => {
       completedAt: '2026-05-07T00:00:00.000Z'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({ get: vi.fn().mockResolvedValue(createDocumentSnapshot(course)) }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
         get: vi.fn().mockResolvedValue({
@@ -3105,9 +3106,7 @@ describe('lesson comments', () => {
       updatedAt: '2026-01-02T00:00:00.000Z'
     })
 
-    const coursesCollection = {
-      doc: vi.fn(() => ({ get: vi.fn().mockResolvedValue(createDocumentSnapshot(course)) }))
-    }
+    const coursesCollection = createReadonlyCollection([course])
     const enrollmentsCollection = {
       where: vi.fn().mockReturnValue({
         get: vi.fn().mockResolvedValue({

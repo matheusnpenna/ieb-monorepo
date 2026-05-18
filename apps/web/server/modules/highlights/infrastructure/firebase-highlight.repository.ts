@@ -4,8 +4,8 @@ import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase
 
 const toHighlightDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<PlatformHighlight, 'id'>)
+    ...(snapshot.data() as Omit<PlatformHighlight, 'id'>),
+    id: snapshot.id
   }) as PlatformHighlight
 
 export class FirebaseHighlightRepository implements HighlightRepository {

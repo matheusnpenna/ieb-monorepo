@@ -19,32 +19,32 @@ import { createFourDigitSlugHash, normalizeCourseSlug } from '../domain/validati
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Course, 'id'>)
+    ...(snapshot.data() as Omit<Course, 'id'>),
+    id: snapshot.id
   }) as Course
 
 const toModuleDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<CourseModule, 'id'>)
+    ...(snapshot.data() as Omit<CourseModule, 'id'>),
+    id: snapshot.id
   }) as CourseModule
 
 const toLessonDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Lesson, 'id'>)
+    ...(snapshot.data() as Omit<Lesson, 'id'>),
+    id: snapshot.id
   }) as Lesson
 
 const toLessonProgressDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<LessonProgress, 'id'>)
+    ...(snapshot.data() as Omit<LessonProgress, 'id'>),
+    id: snapshot.id
   }) as LessonProgress
 
 const toAssessmentDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Assessment, 'id'>)
+    ...(snapshot.data() as Omit<Assessment, 'id'>),
+    id: snapshot.id
   }) as Assessment
 
 const createHttpError = (statusCode: number, statusMessage: string) =>
@@ -91,6 +91,26 @@ const getCourseById = async (courseId: string) => {
   return toCourseDocument(snapshot)
 }
 
+const getCourseBySlug = async (courseSlug: string) => {
+  const normalizedSlug = normalizeCourseSlug(courseSlug)
+  const collection = getFirebaseAdminCollection('courses')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toCourseDocument(document).slug === normalizedSlug)
+        : []
+  const courseSnapshot = slugDocuments.find((document) => {
+    const course = toCourseDocument(document)
+
+    return !course.deletedAt
+  })
+
+  return courseSnapshot ? toCourseDocument(courseSnapshot) : null
+}
+
 const getModuleById = async (moduleId: string) => {
   const snapshot = await getFirebaseAdminCollection('modules').doc(moduleId).get()
 
@@ -102,14 +122,17 @@ const getModuleById = async (moduleId: string) => {
 }
 
 const getModuleBySlug = async (moduleSlug: string) => {
-  const moduleById = await getModuleById(moduleSlug)
-
-  if (moduleById) {
-    return moduleById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('modules').where('slug', '==', moduleSlug).get()
-  const legacyModuleSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(moduleSlug)
+  const collection = getFirebaseAdminCollection('modules')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toModuleDocument(document).slug === normalizedSlug)
+        : []
+  const legacyModuleSnapshot = slugDocuments.find((document) => {
     const module = toModuleDocument(document)
 
     return !module.deletedAt
@@ -125,7 +148,7 @@ const resolveUniqueAdminModuleSlug = async (input: AdminModuleInput) => {
     throw createHttpError(400, 'Informe um slug de modulo valido.')
   }
 
-  const existingBaseModule = await getModuleById(baseSlug)
+  const existingBaseModule = await getModuleBySlug(baseSlug)
 
   if (!existingBaseModule) {
     return baseSlug
@@ -134,7 +157,7 @@ const resolveUniqueAdminModuleSlug = async (input: AdminModuleInput) => {
   for (let salt = 0; salt < 50; salt += 1) {
     const hash = createFourDigitSlugHash(baseSlug, salt)
     const nextSlug = `${hash}-${baseSlug}`
-    const existingModule = await getModuleById(nextSlug)
+    const existingModule = await getModuleBySlug(nextSlug)
 
     if (!existingModule) {
       return nextSlug
@@ -341,7 +364,7 @@ const getAccessibleCourseModules = async (session: AuthSessionContext, courseSlu
     throw createHttpError(400, 'Informe um slug de curso valido.')
   }
 
-  const course = await getCourseById(courseSlug.trim())
+  const course = await getCourseBySlug(courseSlug)
 
   if (!course) {
     throw createHttpError(404, 'Curso nao encontrado.')
@@ -403,13 +426,13 @@ export const createAdminModule = async (session: AuthSessionContext, input: Admi
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  const normalizedCourseId = normalizeCourseSlug(input.courseId)
+  const requestedCourseId = input.courseId.trim()
 
-  if (!normalizedCourseId) {
+  if (!requestedCourseId) {
     throw createHttpError(400, 'Selecione um curso valido para o modulo.')
   }
 
-  const course = await getCourseById(normalizedCourseId)
+  const course = await getCourseById(requestedCourseId)
 
   if (!course || course.deletedAt) {
     throw createHttpError(404, 'Curso nao encontrado para vincular o modulo.')

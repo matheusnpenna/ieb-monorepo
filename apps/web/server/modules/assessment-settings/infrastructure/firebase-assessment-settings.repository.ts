@@ -11,8 +11,8 @@ export class FirebaseAssessmentSettingsRepository implements AssessmentSettingsR
     }
 
     return {
-      id: snapshot.id,
-      ...(snapshot.data() as Omit<AssessmentPlatformSettings, 'id'>)
+      ...(snapshot.data() as Omit<AssessmentPlatformSettings, 'id'>),
+      id: snapshot.id
     }
   }
 

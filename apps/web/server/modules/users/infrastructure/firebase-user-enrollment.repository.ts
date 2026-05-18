@@ -4,8 +4,8 @@ import { getFirebaseAdminCollection, getFirebaseAdminFirestore } from '../../sha
 
 const toEnrollmentDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<CourseEnrollment, 'id'>)
+    ...(snapshot.data() as Omit<CourseEnrollment, 'id'>),
+    id: snapshot.id
   }) as CourseEnrollment
 
 const isCurrentEnrollment = (enrollment: CourseEnrollment) =>

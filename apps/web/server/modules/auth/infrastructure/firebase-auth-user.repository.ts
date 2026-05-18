@@ -4,8 +4,8 @@ import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase
 
 const toUserDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<User, 'id'>)
+    ...(snapshot.data() as Omit<User, 'id'>),
+    id: snapshot.id
   }) as User
 
 export class FirebaseAuthUserRepository implements AuthUserRepository {

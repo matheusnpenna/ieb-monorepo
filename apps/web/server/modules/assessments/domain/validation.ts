@@ -38,23 +38,23 @@ export const assertAdminAssessmentPayload = (
   }
 ) => {
   const existingAssessment = options?.existingAssessment || null
-  const normalizedCourseId = normalizeCourseSlug(input.courseId)
-  const normalizedModuleId = normalizeCourseSlug(input.moduleId)
+  const requestedCourseId = input.courseId.trim()
+  const requestedModuleId = input.moduleId.trim()
   const normalizedSlug = normalizeCourseSlug(options?.resolvedSlug || input.slug || input.title)
 
-  if (!normalizedCourseId) {
+  if (!requestedCourseId) {
     throw createAssessmentError(400, 'Selecione um curso valido para a avaliacao.')
   }
 
-  if (!normalizedModuleId) {
+  if (!requestedModuleId) {
     throw createAssessmentError(400, 'Selecione um modulo valido para a avaliacao.')
   }
 
-  if (existingAssessment && normalizedCourseId !== existingAssessment.courseId) {
+  if (existingAssessment && requestedCourseId !== existingAssessment.courseId) {
     throw createAssessmentError(400, 'O curso da avaliacao nao pode ser alterado apos a criacao.')
   }
 
-  if (existingAssessment && normalizedModuleId !== existingAssessment.moduleId) {
+  if (existingAssessment && requestedModuleId !== existingAssessment.moduleId) {
     throw createAssessmentError(400, 'O modulo da avaliacao nao pode ser alterado apos a criacao.')
   }
 
@@ -140,8 +140,8 @@ export const assertAdminAssessmentPayload = (
   }
 
   return {
-    courseId: normalizedCourseId,
-    moduleId: normalizedModuleId,
+    courseId: requestedCourseId,
+    moduleId: requestedModuleId,
     slug: normalizedSlug
   }
 }

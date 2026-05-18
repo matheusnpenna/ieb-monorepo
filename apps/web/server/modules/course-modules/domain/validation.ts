@@ -32,14 +32,14 @@ export const assertAdminModulePayload = (
   }
 ) => {
   const existingModule = options?.existingModule || null
-  const normalizedCourseId = normalizeCourseSlug(input.courseId)
+  const requestedCourseId = input.courseId.trim()
   const normalizedSlug = normalizeCourseSlug(options?.resolvedSlug || input.slug || input.title)
 
-  if (!normalizedCourseId) {
+  if (!requestedCourseId) {
     throw createCourseModuleError(400, 'Selecione um curso valido para o modulo.')
   }
 
-  if (existingModule && normalizedCourseId !== existingModule.courseId) {
+  if (existingModule && requestedCourseId !== existingModule.courseId) {
     throw createCourseModuleError(400, 'O curso do modulo nao pode ser alterado apos a criacao.')
   }
 
@@ -68,7 +68,7 @@ export const assertAdminModulePayload = (
   }
 
   return {
-    courseId: normalizedCourseId,
+    courseId: requestedCourseId,
     slug: normalizedSlug
   }
 }

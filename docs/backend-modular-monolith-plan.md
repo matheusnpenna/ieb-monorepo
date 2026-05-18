@@ -41,7 +41,7 @@ Cada `*.module.ts` funciona como composition root do modulo, inspirado nos modul
 
 ## Status da migracao de endpoints
 
-Atualizado em 2026-05-15.
+Atualizado em 2026-05-18.
 
 - `apps/web/server/api`: 64/64 endpoints migrados para wrappers finos que importam controllers de `server/modules`.
 - Endpoints sem import direto de `server/utils`, `readBody`, `getQuery`, `setResponseStatus` ou `writeAdminLog`.
@@ -58,6 +58,7 @@ Atualizado em 2026-05-15.
 - As validacoes/factories administrativas de `courses`, `course-modules`, `lessons` e `assessments` foram movidas para `domain`, incluindo regras de ordenacao basicas dos itens filhos.
 - As regras de progresso, disponibilidade de avaliacoes, normalizacao de respostas e correcao de tentativas foram movidas para `domain`.
 - `modules/shared/infrastructure/course-catalog.ts` foi removido apos a migracao dos consumidores para repositories/fatias proprias.
+- Contrato de parametros equalizado entre backend e admin: campos `courseId`, `moduleId`, `lessonId` e `assessmentId` preservam o ID do documento; campos `courseSlug`, `moduleSlug`, `lessonSlug`, `assessmentSlug` e `slug` sao resolvidos pelo campo `slug`.
 
 ## Proxima etapa recomendada
 

@@ -4,8 +4,8 @@ import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase
 
 const toClassroomDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Classroom, 'id'>)
+    ...(snapshot.data() as Omit<Classroom, 'id'>),
+    id: snapshot.id
   }) as Classroom
 
 const toFirestoreClassroom = (classroom: Classroom) => {

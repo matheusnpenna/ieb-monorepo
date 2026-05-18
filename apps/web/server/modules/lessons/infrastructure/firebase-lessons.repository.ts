@@ -26,32 +26,32 @@ import { createFourDigitSlugHash, normalizeCourseSlug } from '../domain/validati
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Course, 'id'>)
+    ...(snapshot.data() as Omit<Course, 'id'>),
+    id: snapshot.id
   }) as Course
 
 const toModuleDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<CourseModule, 'id'>)
+    ...(snapshot.data() as Omit<CourseModule, 'id'>),
+    id: snapshot.id
   }) as CourseModule
 
 const toLessonDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Lesson, 'id'>)
+    ...(snapshot.data() as Omit<Lesson, 'id'>),
+    id: snapshot.id
   }) as Lesson
 
 const toLessonProgressDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<LessonProgress, 'id'>)
+    ...(snapshot.data() as Omit<LessonProgress, 'id'>),
+    id: snapshot.id
   }) as LessonProgress
 
 const toLessonCommentDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<LessonComment, 'id'>)
+    ...(snapshot.data() as Omit<LessonComment, 'id'>),
+    id: snapshot.id
   }) as LessonComment
 
 const createHttpError = (statusCode: number, statusMessage: string) =>
@@ -106,14 +106,17 @@ const getCourseById = async (courseId: string) => {
 }
 
 const getCourseBySlug = async (courseSlug: string) => {
-  const courseById = await getCourseById(courseSlug)
-
-  if (courseById) {
-    return courseById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('courses').where('slug', '==', courseSlug).get()
-  const legacyCourseSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(courseSlug)
+  const collection = getFirebaseAdminCollection('courses')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toCourseDocument(document).slug === normalizedSlug)
+        : []
+  const legacyCourseSnapshot = slugDocuments.find((document) => {
     const course = toCourseDocument(document)
 
     return !course.deletedAt
@@ -133,14 +136,17 @@ const getModuleById = async (moduleId: string) => {
 }
 
 const getModuleBySlug = async (moduleSlug: string) => {
-  const moduleById = await getModuleById(moduleSlug)
-
-  if (moduleById) {
-    return moduleById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('modules').where('slug', '==', moduleSlug).get()
-  const legacyModuleSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(moduleSlug)
+  const collection = getFirebaseAdminCollection('modules')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toModuleDocument(document).slug === normalizedSlug)
+        : []
+  const legacyModuleSnapshot = slugDocuments.find((document) => {
     const module = toModuleDocument(document)
 
     return !module.deletedAt
@@ -160,14 +166,17 @@ const getLessonById = async (lessonId: string) => {
 }
 
 const getLessonBySlug = async (lessonSlug: string) => {
-  const lessonById = await getLessonById(lessonSlug)
-
-  if (lessonById) {
-    return lessonById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('lessons').where('slug', '==', lessonSlug).get()
-  const legacyLessonSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(lessonSlug)
+  const collection = getFirebaseAdminCollection('lessons')
+  const snapshot =
+    typeof collection.where === 'function' ? await collection.where('slug', '==', normalizedSlug).get() : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toLessonDocument(document).slug === normalizedSlug)
+        : []
+  const legacyLessonSnapshot = slugDocuments.find((document) => {
     const lesson = toLessonDocument(document)
 
     return !lesson.deletedAt
@@ -324,7 +333,7 @@ const resolveUniqueAdminLessonSlug = async (input: AdminLessonInput) => {
     throw createHttpError(400, 'Informe um slug de aula valido.')
   }
 
-  const existingBaseLesson = await getLessonById(baseSlug)
+  const existingBaseLesson = await getLessonBySlug(baseSlug)
 
   if (!existingBaseLesson) {
     return baseSlug
@@ -333,7 +342,7 @@ const resolveUniqueAdminLessonSlug = async (input: AdminLessonInput) => {
   for (let salt = 0; salt < 50; salt += 1) {
     const hash = createFourDigitSlugHash(baseSlug, salt)
     const nextSlug = `${hash}-${baseSlug}`
-    const existingLesson = await getLessonById(nextSlug)
+    const existingLesson = await getLessonBySlug(nextSlug)
 
     if (!existingLesson) {
       return nextSlug
@@ -412,45 +421,13 @@ export const listAdminLessonsForManagement = async (
   const lessons = await listAdminLessons()
   const requestedCourseId = typeof filters?.courseId === 'string' ? filters.courseId.trim() : ''
   const requestedModuleId = typeof filters?.moduleId === 'string' ? filters.moduleId.trim() : ''
-  const normalizedCourseSlug = requestedCourseId ? normalizeCourseSlug(requestedCourseId) : ''
-  const normalizedModuleSlug = requestedModuleId ? normalizeCourseSlug(requestedModuleId) : ''
-  const [resolvedCourse, resolvedModule] = await Promise.all([
-    requestedCourseId
-      ? (async () => {
-          const courseById = await getCourseById(requestedCourseId)
-
-          if (courseById) {
-            return courseById
-          }
-
-          return normalizedCourseSlug ? await getCourseBySlug(normalizedCourseSlug) : null
-        })()
-      : Promise.resolve(null),
-    requestedModuleId
-      ? (async () => {
-          const moduleById = await getModuleById(requestedModuleId)
-
-          if (moduleById) {
-            return moduleById
-          }
-
-          return normalizedModuleSlug ? await getModuleBySlug(normalizedModuleSlug) : null
-        })()
-      : Promise.resolve(null)
-  ])
-  const acceptedCourseIds = new Set(
-    [requestedCourseId, normalizedCourseSlug, resolvedCourse?.id || '', resolvedCourse?.slug || ''].filter(Boolean)
-  )
-  const acceptedModuleIds = new Set(
-    [requestedModuleId, normalizedModuleSlug, resolvedModule?.id || '', resolvedModule?.slug || ''].filter(Boolean)
-  )
 
   return lessons.filter((lesson) => {
-    if (acceptedCourseIds.size > 0 && !acceptedCourseIds.has(lesson.courseId)) {
+    if (requestedCourseId && lesson.courseId !== requestedCourseId) {
       return false
     }
 
-    if (acceptedModuleIds.size > 0 && !acceptedModuleIds.has(lesson.moduleId)) {
+    if (requestedModuleId && lesson.moduleId !== requestedModuleId) {
       return false
     }
 
@@ -483,15 +460,18 @@ export const createAdminLesson = async (session: AuthSessionContext, input: Admi
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  if (!input.courseId) {
+  const requestedCourseId = input.courseId.trim()
+  const requestedModuleId = input.moduleId.trim()
+
+  if (!requestedCourseId) {
     throw createHttpError(400, 'Selecione um curso valido para a aula.')
   }
 
-  if (!input.moduleId) {
+  if (!requestedModuleId) {
     throw createHttpError(400, 'Selecione um modulo valido para a aula.')
   }
 
-  const [course, module] = await Promise.all([getCourseById(input.courseId), getModuleById(input.moduleId)])
+  const [course, module] = await Promise.all([getCourseById(requestedCourseId), getModuleById(requestedModuleId)])
 
   if (!course || course.deletedAt) {
     throw createHttpError(404, 'Curso nao encontrado para vincular a aula.')

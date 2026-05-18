@@ -40,23 +40,23 @@ export const assertAdminLessonPayload = (
   }
 ) => {
   const existingLesson = options?.existingLesson || null
-  const normalizedCourseId = normalizeCourseSlug(input.courseId)
-  const normalizedModuleId = normalizeCourseSlug(input.moduleId)
+  const requestedCourseId = input.courseId.trim()
+  const requestedModuleId = input.moduleId.trim()
   const normalizedSlug = normalizeCourseSlug(options?.resolvedSlug || input.slug || input.title)
 
-  if (!normalizedCourseId) {
+  if (!requestedCourseId) {
     throw createLessonError(400, 'Selecione um curso valido para a aula.')
   }
 
-  if (!normalizedModuleId) {
+  if (!requestedModuleId) {
     throw createLessonError(400, 'Selecione um modulo valido para a aula.')
   }
 
-  if (existingLesson && normalizedCourseId !== existingLesson.courseId) {
+  if (existingLesson && requestedCourseId !== existingLesson.courseId) {
     throw createLessonError(400, 'O curso da aula nao pode ser alterado apos a criacao.')
   }
 
-  if (existingLesson && normalizedModuleId !== existingLesson.moduleId) {
+  if (existingLesson && requestedModuleId !== existingLesson.moduleId) {
     throw createLessonError(400, 'O modulo da aula nao pode ser alterado apos a criacao.')
   }
 
@@ -109,8 +109,8 @@ export const assertAdminLessonPayload = (
   }
 
   return {
-    courseId: normalizedCourseId,
-    moduleId: normalizedModuleId,
+    courseId: requestedCourseId,
+    moduleId: requestedModuleId,
     slug: normalizedSlug
   }
 }

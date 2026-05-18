@@ -4,8 +4,8 @@ import { getFirebaseAdminCollection } from '../../shared/infrastructure/firebase
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Course, 'id'>)
+    ...(snapshot.data() as Omit<Course, 'id'>),
+    id: snapshot.id
   }) as Course
 
 export class FirebaseClassroomCourseRepository implements ClassroomCourseRepository {

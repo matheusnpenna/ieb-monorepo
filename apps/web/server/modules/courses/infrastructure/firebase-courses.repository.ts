@@ -17,26 +17,26 @@ import { createFourDigitSlugHash, normalizeCourseSlug } from '../domain/validati
 
 const toCourseDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Course, 'id'>)
+    ...(snapshot.data() as Omit<Course, 'id'>),
+    id: snapshot.id
   }) as Course
 
 const toModuleDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<CourseModule, 'id'>)
+    ...(snapshot.data() as Omit<CourseModule, 'id'>),
+    id: snapshot.id
   }) as CourseModule
 
 const toLessonDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<Lesson, 'id'>)
+    ...(snapshot.data() as Omit<Lesson, 'id'>),
+    id: snapshot.id
   }) as Lesson
 
 const toLessonProgressDocument = (snapshot: { id: string; data: () => unknown }) =>
   ({
-    id: snapshot.id,
-    ...(snapshot.data() as Omit<LessonProgress, 'id'>)
+    ...(snapshot.data() as Omit<LessonProgress, 'id'>),
+    id: snapshot.id
   }) as LessonProgress
 
 const createHttpError = (statusCode: number, statusMessage: string) =>
@@ -84,14 +84,18 @@ const getCourseById = async (courseId: string) => {
 }
 
 const getCourseBySlug = async (courseSlug: string) => {
-  const courseById = await getCourseById(courseSlug)
-
-  if (courseById) {
-    return courseById
-  }
-
-  const snapshot = await getFirebaseAdminCollection('courses').where('slug', '==', courseSlug).get()
-  const legacyCourseSnapshot = snapshot.docs.find((document) => {
+  const normalizedSlug = normalizeCourseSlug(courseSlug)
+  const collection = getFirebaseAdminCollection('courses')
+  const snapshot = typeof collection.where === 'function'
+    ? await collection.where('slug', '==', normalizedSlug).get()
+    : null
+  const slugDocuments =
+    snapshot && snapshot.docs.length > 0
+      ? snapshot.docs
+      : typeof collection.get === 'function'
+        ? (await collection.get()).docs.filter((document) => toCourseDocument(document).slug === normalizedSlug)
+        : []
+  const legacyCourseSnapshot = slugDocuments.find((document) => {
     const course = toCourseDocument(document)
 
     return !course.deletedAt
@@ -107,7 +111,7 @@ const resolveUniqueAdminCourseSlug = async (input: AdminCourseInput) => {
     throw createHttpError(400, 'Informe um slug de curso valido.')
   }
 
-  const existingBaseCourse = await getCourseById(baseSlug)
+  const existingBaseCourse = await getCourseBySlug(baseSlug)
 
   if (!existingBaseCourse) {
     return baseSlug
@@ -116,7 +120,7 @@ const resolveUniqueAdminCourseSlug = async (input: AdminCourseInput) => {
   for (let salt = 0; salt < 50; salt += 1) {
     const hash = createFourDigitSlugHash(baseSlug, salt)
     const nextSlug = `${hash}-${baseSlug}`
-    const existingCourse = await getCourseById(nextSlug)
+    const existingCourse = await getCourseBySlug(nextSlug)
 
     if (!existingCourse) {
       return nextSlug
@@ -313,7 +317,7 @@ export const getAdminCourseBySlug = async (session: AuthSessionContext, courseSl
     throw createHttpError(400, 'Informe um slug de curso valido.')
   }
 
-  const course = await getCourseById(normalizedSlug)
+  const course = await getCourseBySlug(normalizedSlug)
 
   if (!course || course.deletedAt) {
     throw createHttpError(404, 'Curso nao encontrado.')
@@ -476,7 +480,7 @@ export const getAccessibleCourseDetailBySlug = async (session: AuthSessionContex
     throw createHttpError(400, 'Informe um slug de curso valido.')
   }
 
-  const course = await getCourseById(courseSlug.trim())
+  const course = await getCourseBySlug(courseSlug)
 
   if (!course) {
     throw createHttpError(404, 'Curso nao encontrado.')
