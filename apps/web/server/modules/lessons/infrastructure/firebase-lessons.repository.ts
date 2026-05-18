@@ -483,18 +483,15 @@ export const createAdminLesson = async (session: AuthSessionContext, input: Admi
     throw createHttpError(403, 'Acesso restrito ao painel administrativo.')
   }
 
-  const normalizedCourseId = normalizeCourseSlug(input.courseId)
-  const normalizedModuleId = normalizeCourseSlug(input.moduleId)
-
-  if (!normalizedCourseId) {
+  if (!input.courseId) {
     throw createHttpError(400, 'Selecione um curso valido para a aula.')
   }
 
-  if (!normalizedModuleId) {
+  if (!input.moduleId) {
     throw createHttpError(400, 'Selecione um modulo valido para a aula.')
   }
 
-  const [course, module] = await Promise.all([getCourseById(normalizedCourseId), getModuleById(normalizedModuleId)])
+  const [course, module] = await Promise.all([getCourseById(input.courseId), getModuleById(input.moduleId)])
 
   if (!course || course.deletedAt) {
     throw createHttpError(404, 'Curso nao encontrado para vincular a aula.')

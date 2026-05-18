@@ -59,6 +59,9 @@ importers:
       vue:
         specifier: ^3.5.33
         version: 3.5.33(typescript@5.9.3)
+      wavesurfer.js:
+        specifier: ^7.12.7
+        version: 7.12.7
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -4467,6 +4470,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  wavesurfer.js@7.12.7:
+    resolution: {integrity: sha512-TIe7hB6OCZysNOZ2cn2NR8Qpko22POWel6rauNcqOammFoH65NYQUM35unNLLMIlUMVYvjJ6w/TTl/G/m+w0nA==}
 
   web-streams-polyfill@3.3.3:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
@@ -9448,6 +9454,8 @@ snapshots:
       '@vue/shared': 3.5.33
     optionalDependencies:
       typescript: 5.9.3
+
+  wavesurfer.js@7.12.7: {}
 
   web-streams-polyfill@3.3.3: {}
 

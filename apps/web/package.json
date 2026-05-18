@@ -29,6 +29,7 @@
     "pdfjs-dist": "^4.10.38",
     "plyr": "^3.8.3",
     "vue": "^3.5.33",
+    "wavesurfer.js": "^7.12.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {

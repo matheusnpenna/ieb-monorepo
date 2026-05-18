@@ -8,6 +8,8 @@ import LessonCommentsPanel from '../../../../../../components/content/LessonComm
 import LessonCompletionToggle from '../../../../../../components/content/LessonCompletionToggle.vue'
 import LessonNavigationControls from '../../../../../../components/content/LessonNavigationControls.vue'
 import SurfaceCard from '../../../../../../components/base/SurfaceCard.vue'
+import AudioPlayer from '../../../../../../components/ui/AudioPlayer.vue'
+import PdfViewer from '../../../../../../components/ui/PdfViewer.vue'
 import UiSpinner from '../../../../../../components/ui/UiSpinner.vue'
 import LessonVideoPlayer from '../../../../../../components/content/LessonVideoPlayer.vue'
 import { getRequestErrorMessage } from '../../../../../../lib/utils'
@@ -16,11 +18,23 @@ definePageMeta({
   layout: 'content'
 })
 
-interface PlayerProgressPayload {
+interface TimedMediaProgressPayload {
   currentTimeInSeconds: number
   durationInSeconds: number
   completionRate: number
   ended: boolean
+}
+
+interface AudioProgressPayload {
+  currentTimeInSeconds: number
+  durationInSeconds: number
+  percentage: number
+}
+
+interface PdfReadingProgressPayload {
+  currentPage: number
+  totalPages: number
+  percentage: number
 }
 
 interface StoredLessonProgress {
@@ -64,6 +78,11 @@ const lessonDetail = computed(() => {
 
 const lesson = computed(() => lessonDetail.value?.lesson || null)
 const moduleData = computed(() => lessonDetail.value?.module || null)
+const lessonMediaUrl = computed(() => lesson.value?.mediaUrl?.trim() || null)
+const isVideoLesson = computed(() => lesson.value?.contentType === 'video')
+const isAudioLesson = computed(() => lesson.value?.contentType === 'audio')
+const isPdfLesson = computed(() => lesson.value?.contentType === 'pdf')
+const pdfInitialPage = computed(() => Math.max(1, Math.floor(lessonProgressState.value?.lastPositionInSeconds || 1)))
 const progressStorageKey = computed(() =>
   `lesson-progress:${courseSlug.value}:${moduleSlug.value}:${lessonSlug.value}`
 )
@@ -74,6 +93,21 @@ const lessonErrorMessage = computed(() => {
   }
 
   return lessonDetailResponse.value.messages[0] || 'Nao foi possivel carregar a aula.'
+})
+const mediaUnavailableMessage = computed(() => {
+  if (!lesson.value) {
+    return 'Nenhuma aula foi encontrada para exibicao.'
+  }
+
+  if (isAudioLesson.value) {
+    return 'Nenhum audio foi disponibilizado para esta aula no momento.'
+  }
+
+  if (isPdfLesson.value) {
+    return 'Nenhum PDF foi disponibilizado para esta aula no momento.'
+  }
+
+  return 'Nenhum video foi disponibilizado para esta aula no momento.'
 })
 
 const lessonProgressState = ref<LessonDetailProgress | null>(null)
@@ -208,7 +242,7 @@ const saveLessonProgress = async (payload: { lastPositionInSeconds: number; mark
   }
 }
 
-const onVideoProgress = async (payload: PlayerProgressPayload) => {
+const onTimedMediaProgress = async (payload: TimedMediaProgressPayload) => {
   if (!lesson.value) {
     return
   }
@@ -235,6 +269,50 @@ const onVideoProgress = async (payload: PlayerProgressPayload) => {
   await saveLessonProgress({
     lastPositionInSeconds: payload.currentTimeInSeconds,
     markAsCompleted: payload.ended
+  })
+}
+
+const onAudioProgress = (payload: AudioProgressPayload) =>
+  onTimedMediaProgress({
+    currentTimeInSeconds: payload.currentTimeInSeconds,
+    durationInSeconds: payload.durationInSeconds,
+    completionRate: payload.percentage,
+    ended: false
+  })
+
+const onAudioEnded = (payload: AudioProgressPayload) =>
+  onTimedMediaProgress({
+    currentTimeInSeconds: payload.currentTimeInSeconds,
+    durationInSeconds: payload.durationInSeconds,
+    completionRate: 100,
+    ended: true
+  })
+
+const onPdfReadingProgress = async (payload: PdfReadingProgressPayload) => {
+  if (!lesson.value) {
+    return
+  }
+
+  const currentSavedPage = lessonProgressState.value?.lastPositionInSeconds || 0
+  const isCompleted = payload.percentage >= 100
+
+  if (!isCompleted && payload.currentPage <= currentSavedPage) {
+    return
+  }
+
+  const optimisticProgress = {
+    lastPositionInSeconds: payload.currentPage,
+    watchedMinutes: Math.max(lessonProgressState.value?.watchedMinutes || 0, payload.currentPage),
+    completionRate: Math.max(lessonProgressState.value?.completionRate || 0, payload.percentage),
+    isCompleted: Boolean(lessonProgressState.value?.isCompleted || isCompleted)
+  }
+
+  setLessonProgressState(optimisticProgress, { persistLocal: true })
+  patchLessonDetailProgress(optimisticProgress)
+
+  await saveLessonProgress({
+    lastPositionInSeconds: payload.currentPage,
+    markAsCompleted: isCompleted
   })
 }
 
@@ -278,13 +356,37 @@ useSeoMeta({
             @updated="onLessonCompletionUpdated"
           />
 
-          <LessonVideoPlayer
-            :src="lessonDetail?.videoUrl || null"
-            :poster="lesson?.thumbnailUrl || null"
-            :title="lesson?.title || 'Aula'"
-            :start-at-seconds="lessonProgressState?.lastPositionInSeconds || 0"
-            @progress="onVideoProgress"
-          />
+          <template v-if="lesson">
+            <LessonVideoPlayer
+              v-if="isVideoLesson && lessonMediaUrl"
+              :src="lessonMediaUrl"
+              :poster="lesson.thumbnailUrl || null"
+              :title="lesson.title || 'Aula'"
+              :start-at-seconds="lessonProgressState?.lastPositionInSeconds || 0"
+              @progress="onTimedMediaProgress"
+            />
+
+            <AudioPlayer
+              v-else-if="isAudioLesson && lessonMediaUrl"
+              :src="lessonMediaUrl"
+              :title="lesson.title || 'Audio da aula'"
+              :initial-position-in-seconds="lessonProgressState?.lastPositionInSeconds || 0"
+              @progress="onAudioProgress"
+              @ended="onAudioEnded"
+            />
+
+            <PdfViewer
+              v-else-if="isPdfLesson && lessonMediaUrl"
+              :src="lessonMediaUrl"
+              :initial-page="pdfInitialPage"
+              @page-change="onPdfReadingProgress"
+              @reading-progress="onPdfReadingProgress"
+            />
+
+            <div v-else class="lesson-media-empty">
+              {{ mediaUnavailableMessage }}
+            </div>
+          </template>
 
           <LessonNavigationControls
             :previous-lesson="lessonDetail?.previousLesson || null"
@@ -328,6 +430,18 @@ useSeoMeta({
 
 .completion-feedback {
   color: #ff9d9d;
+}
+
+.lesson-media-empty {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-muted);
+  text-align: center;
+  padding: 2rem;
 }
 
 .lesson-meta {
